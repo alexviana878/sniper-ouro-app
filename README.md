@@ -1,0 +1,2 @@
+# sniper-ouro-app
+public
