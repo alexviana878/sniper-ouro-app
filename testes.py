@@ -168,4 +168,38 @@ if bloqueio_banca_baixa:
 if avisos_mentora:
     for aviso in avisos_mentora: st.markdown(f'<div class="mentora-card">{aviso}</div>', unsafe_allow_html=True)
 
-st.markdown
+st.markdown(f'<div class="{cor}"><h1 style="color: {"#00ff00" if emitiu_entrada else "#ef4444"};">{sinal}</h1><p>CONFIANÇA ADAPTATIVA: {conf}<br>DIRETRIZ MATEMÁTICA: {status}</p></div>', unsafe_allow_html=True)
+
+# --- 👑 NOVO PAINEL: RANKING E ASSERTIVIDADE EM PERCENTUAL ---
+st.markdown('<div class="ranking-card">', unsafe_allow_html=True)
+st.markdown('<h3 style="color: #f59e0b; text-align: center; margin-bottom: 5px;">👑 RANKING DE ASSERTIVIDADE DA SESSÃO</h3>', unsafe_allow_html=True)
+
+total = st.session_state.total_sinais
+pct_roxa = (st.session_state.acertos_roxas / total * 100) if total > 0 else 0.0
+pct_rosa = (st.session_state.acertos_rosas / total * 100) if total > 0 else 0.0
+pct_erro = (st.session_state.nao_bateu / total * 100) if total > 0 else 0.0
+pct_geral = ((st.session_state.acertos_roxas + st.session_state.acertos_rosas) / total * 100) if total > 0 else 0.0
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric(label="💜 ASSERTIVIDADE ROXAS", value=f"{pct_roxa:.1f}%", delta=f"{st.session_state.acertos_roxas} acertos")
+with col2:
+    st.metric(label="🌸 ASSERTIVIDADE ROSAS", value=f"{pct_rosa:.1f}%", delta=f"{st.session_state.acertos_rosas} acertos")
+with col3:
+    st.metric(label="❌ NÃO BATEU (ERRORS)", value=f"{pct_erro:.1f}%", delta=f"-{st.session_state.nao_bateu} vezes", delta_color="inverse")
+
+st.markdown(f"<p style='text-align: center; color: #aaa; margin-top: 10px;'><b>Total de Entradas Computadas:</b> {total} | <b>Taxa de Acerto Geral:</b> <span style='color:#00ff00;'>{pct_geral:.1f}%</span></p>", unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
+
+# --- BOTÃO DE RESET ---
+if st.button("Limpar Histórico e Reiniciar Estatísticas"):
+    st.session_state.historico = []
+    st.session_state.distancia_rosa = 0
+    st.session_state.contador_reset = -1
+    st.session_state.contador_regra13 = -1
+    st.session_state.sinal_pendente = False
+    st.session_state.total_sinais = 0
+    st.session_state.acertos_roxas = 0
+    st.session_state.acertos_rosas = 0
+    st.session_state.nao_bateu = 0
+    st.rerun()
