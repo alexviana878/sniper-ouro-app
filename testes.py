@@ -46,12 +46,14 @@ if 'distancia_rosa' not in st.session_state: st.session_state.distancia_rosa = 0
 if 'contador_reset' not in st.session_state: st.session_state.contador_reset = -1
 if 'contador_regra13' not in st.session_state: st.session_state.contador_regra13 = -1
 
-# Variáveis do Painel de Assertividade
-if 'sinal_pendente' not in st.session_state: st.session_state.sinal_pendente = False
-if 'total_sinais' not in st.session_state: st.session_state.total_sinais = 0
+# Variáveis Isoladas de Assertividade (Correção do Alex)
+if 'tipo_sinal_pendente' not in st.session_state: st.session_state.tipo_sinal_pendente = None # Pode ser "ROXA" ou "ROSA"
+if 'sinais_emitidos_roxa' not in st.session_state: st.session_state.sinais_emitidos_roxa = 0
+if 'sinais_emitidos_rosa' not in st.session_state: st.session_state.sinais_emitidos_rosa = 0
 if 'acertos_roxas' not in st.session_state: st.session_state.acertos_roxas = 0
 if 'acertos_rosas' not in st.session_state: st.session_state.acertos_rosas = 0
-if 'nao_bateu' not in st.session_state: st.session_state.nao_bateu = 0
+if 'nao_bateu_roxa' not in st.session_state: st.session_state.nao_bateu_roxa = 0
+if 'nao_bateu_rosa' not in st.session_state: st.session_state.nao_bateu_rosa = 0
 
 # --- CRONOS TIMING & FILTRO DE MINUTOS PAGANTES ---
 agora = datetime.now()
@@ -71,16 +73,22 @@ st.title("🎯 Sniper Ouro - Força Máxima")
 vela = st.number_input("Digite a última vela do gráfico:", min_value=0.0, format="%.2f", step=0.01)
 
 if st.button("CALCULAR PROBABILIDADE"):
-    # Se havia um sinal de entrada pendente no clique anterior, avalia o resultado dele agora
-    if st.session_state.sinal_pendente:
-        st.session_state.total_sinais += 1
-        if vela >= 10.00:
-            st.session_state.acertos_rosas += 1
-        elif vela >= 2.00:
+    # MATEMÁTICA CORRIGIDA PELO ALEX: Avalia o sinal baseado no objetivo exclusivo dele
+    if st.session_state.tipo_sinal_pendente == "ROXA":
+        st.session_state.sinais_emitidos_roxa += 1
+        if vela >= 2.00:
             st.session_state.acertos_roxas += 1
         else:
-            st.session_state.nao_bateu += 1
-        st.session_state.sinal_pendente = False
+            st.session_state.nao_bateu_roxa += 1
+        st.session_state.tipo_sinal_pendente = None
+
+    elif st.session_state.tipo_sinal_pendente == "ROSA":
+        st.session_state.sinais_emitidos_rosa += 1
+        if vela >= 10.00:
+            st.session_state.acertos_rosas += 1
+        else:
+            st.session_state.nao_bateu_rosa += 1
+        st.session_state.tipo_sinal_pendente = None
 
     st.session_state.historico.append(vela)
     st.session_state.distancia_rosa = 0 if vela >= 10.0 else st.session_state.distancia_rosa + 1
@@ -114,19 +122,19 @@ bloqueio_banca_baixa = verificar_perigo_banca(st.session_state.historico)
 # --- MOTORIZAÇÃO PRINCIPAL ---
 def processar_independente(historico):
     if len(historico) < 5: 
-        return "ANALISANDO...", "wait-card", "ALIMENTANDO SESSÃO (INSIRA MAIS VELAS)", "---", False
+        return "ANALISANDO...", "wait-card", "ALIMENTANDO SESSÃO (INSIRA MAIS VELAS)", "---", None
     
     v_atual = historico[-1]
     total_azuis_janela = sum(1 for x in historico[-5:] if x < 2.0)
     
     if bloqueio_banca_baixa:
-        return "AGUARDAR ✋", "wait-card", "PROTEÇÃO BANCA BAIXA: MERCADO EM RECOLHIMENTO (NÃO FORCE)", "100%", False
+        return "AGUARDAR ✋", "wait-card", "PROTEÇÃO BANCA BAIXA: MERCADO EM RECOLHIMENTO (NÃO FORCE)", "100%", None
     
     if total_azuis_janela >= 4 and v_atual < 2.0:
-        return "AGUARDAR ✋", "wait-card", "MERCADO EM RECOLHIMENTO PROFUNDO", "100%", False
+        return "AGUARDAR ✋", "wait-card", "MERCADO EM RECOLHIMENTO PROFUNDO", "100%", None
         
     if len(historico) >= 3 and historico[-2] < 1.50 and historico[-3] < 1.50 and v_atual >= 2.0:
-        return "AGUARDAR ✋", "wait-card", "CONFIRMANDO MUDANÇA DE PADRÃO (AGUARDE MAIS UMA ROXA)", "98%", False
+        return "AGUARDAR ✋", "wait-card", "CONFIRMANDO MUDANÇA DE PADRÃO (AGUARDE MAIS UMA ROXA)", "98%", None
 
     decimal_str = f"{v_atual:.2f}"
     final_cinco = decimal_str.endswith('5')
@@ -136,28 +144,28 @@ def processar_independente(historico):
     bônus = 5 if janela_ativa else 0
 
     if len(historico) >= 2 and historico[-2] >= 2.0 and v_atual >= 2.0 and janela_ativa:
-        return "ENTRAR (MOMENTO PAGANTE) 🎯", "target-card", "CONFLUÊNCIA DE HORÁRIO + FLUXO DO ALGORITMO", f"{95 + bônus}%", True
+        return "ENTRAR (MOMENTO PAGANTE) 🎯", "target-card", "CONFLUÊNCIA DE HORÁRIO + FLUXO DO ALGORITMO", f"{95 + bônus}%", "ROXA"
 
     if len(historico) >= 2 and historico[-2] >= 2.0 and v_atual >= 2.0:
-        return "ENTRAR (PADRÃO SEGURO) 🎯", "target-card", "MERCADO EM FLUXO PAGADOR CONTÍNUO", "96%", True
+        return "ENTRAR (PADRÃO SEGURO) 🎯", "target-card", "MERCADO EM FLUXO PAGADOR CONTÍNUO", "96%", "ROXA"
 
     if st.session_state.distancia_rosa > 12 and v_atual > 2.0:
-        return "BUSCAR ROSA 🌸", "target-card", "PONTO CRÍTICO DE MATURAÇÃO PARA VELAS ALTAS", f"{92 + bônus}%", True
+        return "BUSCAR ROSA 🌸", "target-card", "PONTO CRÍTICO DE MATURAÇÃO PARA VELAS ALTAS", f"{92 + bônus}%", "ROSA"
         
     if v_atual < 2.0 and any(x >= 2.0 for x in historico[-4:-1]) and total_azuis_janela <= 2:
-        return "ENTRAR (RECUPERAÇÃO) 🎯", "target-card", "CORREÇÃO DE GRÁFICO CURTA", "92%", True
+        return "ENTRAR (RECUPERAÇÃO) 🎯", "target-card", "CORREÇÃO DE GRÁFICO CURTA", "92%", "ROXA"
 
     if (gatilho_10x or gatilho_5x or final_cinco) and total_azuis_janela <= 2:
-        return "ENTRAR (GATILHO DECIMAL) 🎯", "target-card", "CONFLUÊNCIA DE SUBIDA HISTÓRICA", "94%", True
+        return "ENTRAR (GATILHO DECIMAL) 🎯", "target-card", "CONFLUÊNCIA DE SUBIDA HISTÓRICA", "94%", "ROXA"
 
-    if v_atual < 1.15: return "AGUARDAR ✋", "wait-card", "VELA DE COMPRESSÃO EXTREMA (RISCO ALTO)", "99%", False
-    return "AGUARDAR ✋", "wait-card", "PROCURANDO ESTABILIDADE NO CICLO", "---", False
+    if v_atual < 1.15: return "AGUARDAR ✋", "wait-card", "VELA DE COMPRESSÃO EXTREMA (RISCO ALTO)", "99%", None
+    return "AGUARDAR ✋", "wait-card", "PROCURANDO ESTABILIDADE NO CICLO", "---", None
 
-sinal, cor, status, conf, emitiu_entrada = processar_independente(st.session_state.historico)
+sinal, cor, status, conf, objetivo_sinal = processar_independente(st.session_state.historico)
 
-# Ativa o gatilho para monitorar o resultado da entrada na próxima rodada
-if emitiu_entrada:
-    st.session_state.sinal_pendente = True
+# Ativa o direcionamento do sinal pendente para a próxima rodada
+if objetivo_sinal:
+    st.session_state.tipo_sinal_pendente = objetivo_sinal
 
 # --- PAINEL EXIBIDO NA TELA ---
 st.markdown(f'<div class="status-card"><h3 style="color: #a855f7;">RADAR ROSA 🌸</h3><p>Distância Atual: {st.session_state.distancia_rosa} rodadas</p></div>', unsafe_allow_html=True)
@@ -168,27 +176,31 @@ if bloqueio_banca_baixa:
 if avisos_mentora:
     for aviso in avisos_mentora: st.markdown(f'<div class="mentora-card">{aviso}</div>', unsafe_allow_html=True)
 
-st.markdown(f'<div class="{cor}"><h1 style="color: {"#00ff00" if emitiu_entrada else "#ef4444"};">{sinal}</h1><p>CONFIANÇA ADAPTATIVA: {conf}<br>DIRETRIZ MATEMÁTICA: {status}</p></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="{cor}"><h1 style="color: {"#00ff00" if objetivo_sinal else "#ef4444"};">{sinal}</h1><p>CONFIANÇA ADAPTATIVA: {conf}<br>DIRETRIZ MATEMÁTICA: {status}</p></div>', unsafe_allow_html=True)
 
-# --- 👑 NOVO PAINEL: RANKING E ASSERTIVIDADE EM PERCENTUAL ---
+# --- 👑 PAINEL ATUALIZADO: RANKING INDEPENDENTE E ISOLADO POR SINAL ---
 st.markdown('<div class="ranking-card">', unsafe_allow_html=True)
-st.markdown('<h3 style="color: #f59e0b; text-align: center; margin-bottom: 5px;">👑 RANKING DE ASSERTIVIDADE DA SESSÃO</h3>', unsafe_allow_html=True)
+st.markdown('<h3 style="color: #f59e0b; text-align: center; margin-bottom: 5px;">👑 RANKING DE ASSERTIVIDADE REAL DA SESSÃO</h3>', unsafe_allow_html=True)
 
-total = st.session_state.total_sinais
-pct_roxa = (st.session_state.acertos_roxas / total * 100) if total > 0 else 0.0
-pct_rosa = (st.session_state.acertos_rosas / total * 100) if total > 0 else 0.0
-pct_erro = (st.session_state.nao_bateu / total * 100) if total > 0 else 0.0
-pct_geral = ((st.session_state.acertos_roxas + st.session_state.acertos_rosas) / total * 100) if total > 0 else 0.0
+# Cálculos Isolados (Evitando distorções de denominador)
+emitidos_roxa = st.session_state.sinais_emitidos_roxa
+emitidos_rosa = st.session_state.sinais_emitidos_rosa
+total_erros = st.session_state.nao_bateu_roxa + st.session_state.nao_bateu_rosa
+total_geral_sinais = emitidos_roxa + emitidos_rosa
+
+pct_roxa = (st.session_state.acertos_roxas / emitidos_roxa * 100) if emitidos_roxa > 0 else 0.0
+pct_rosa = (st.session_state.acertos_rosas / emitidos_rosa * 100) if emitidos_rosa > 0 else 0.0
+pct_geral = ((st.session_state.acertos_roxas + st.session_state.acertos_rosas) / total_geral_sinais * 100) if total_geral_sinais > 0 else 0.0
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric(label="💜 ASSERTIVIDADE ROXAS", value=f"{pct_roxa:.1f}%", delta=f"{st.session_state.acertos_roxas} acertos")
+    st.metric(label="💜 ALVO VELAS ROXAS", value=f"{pct_roxa:.1f}%", delta=f"{st.session_state.acertos_roxas} de {emitidos_roxa} sinais")
 with col2:
-    st.metric(label="🌸 ASSERTIVIDADE ROSAS", value=f"{pct_rosa:.1f}%", delta=f"{st.session_state.acertos_rosas} acertos")
+    st.metric(label="🌸 ALVO VELAS ROSAS", value=f"{pct_rosa:.1f}%", delta=f"{st.session_state.acertos_rosas} de {emitidos_rosa} sinais")
 with col3:
-    st.metric(label="❌ NÃO BATEU (ERRORS)", value=f"{pct_erro:.1f}%", delta=f"-{st.session_state.nao_bateu} vezes", delta_color="inverse")
+    st.metric(label="❌ TOTAL NÃO BATEU", value=f"{total_erros} vezes", delta=f"Roxas: {st.session_state.nao_bateu_roxa} | Rosas: {st.session_state.nao_bateu_rosa}", delta_color="inverse")
 
-st.markdown(f"<p style='text-align: center; color: #aaa; margin-top: 10px;'><b>Total de Entradas Computadas:</b> {total} | <b>Taxa de Acerto Geral:</b> <span style='color:#00ff00;'>{pct_geral:.1f}%</span></p>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: #aaa; margin-top: 10px;'><b>Total Geral de Operações:</b> {total_geral_sinais} | <b>Eficiência Global do Robô:</b> <span style='color:#00ff00;'>{pct_geral:.1f}%</span></p>", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # --- BOTÃO DE RESET ---
@@ -197,9 +209,11 @@ if st.button("Limpar Histórico e Reiniciar Estatísticas"):
     st.session_state.distancia_rosa = 0
     st.session_state.contador_reset = -1
     st.session_state.contador_regra13 = -1
-    st.session_state.sinal_pendente = False
-    st.session_state.total_sinais = 0
+    st.session_state.tipo_sinal_pendente = None
+    st.session_state.sinais_emitidos_roxa = 0
+    st.session_state.sinais_emitidos_rosa = 0
     st.session_state.acertos_roxas = 0
     st.session_state.acertos_rosas = 0
-    st.session_state.nao_bateu = 0
+    st.session_state.nao_bateu_roxa = 0
+    st.session_state.nao_bateu_rosa = 0
     st.rerun()
