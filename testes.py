@@ -46,18 +46,18 @@ if 'distancia_rosa' not in st.session_state: st.session_state.distancia_rosa = 0
 if 'contador_reset' not in st.session_state: st.session_state.contador_reset = -1
 if 'contador_regra13' not in st.session_state: st.session_state.contador_regra13 = -1
 
-# Variáveis Isoladas de Assertividade
-if 'tipo_sinal_pendente' not in st.session_state: st.session_state.tipo_sinal_pendente = None 
-if 'sinais_emitidos_roxa' not in st.session_state: st.session_state.sinais_emitidos_roxa = 0
-if 'sinais_emitidos_rosa' not in st.session_state: st.session_state.sinais_emitidos_rosa = 0
-if 'acertos_roxas' not in st.session_state: st.session_state.acertos_roxas = 0
-if 'acertos_rosas' not in st.session_state: st.session_state.acertos_rosas = 0
-if 'nao_bateu_roxa' not in st.session_state: st.session_state.nao_bateu_roxa = 0
-if 'nao_bateu_rosa' not in st.session_state: st.session_state.nao_bateu_rosa = 0
+# Variáveis para a Contabilidade Comercial Rigorosa (Ideia do Alex)
+if 'sinal_anterior' not in st.session_state: st.session_state.sinal_anterior = None 
+if 'tentativas_roxa' not in st.session_state: st.session_state.tentativas_roxa = 0
+if 'tentativas_rosa' not in st.session_state: st.session_state.tentativas_rosa = 0
+if 'acertos_roxa' not in st.session_state: st.session_state.acertos_roxa = 0
+if 'acertos_rosa' not in st.session_state: st.session_state.acertos_rosa = 0
+if 'erros_roxa' not in st.session_state: st.session_state.erros_roxa = 0
+if 'erros_rosa' not in st.session_state: st.session_state.erros_rosa = 0
 
 # --- CRONOS TIMING & FILTRO DE MINUTOS PAGANTES ---
 agora = datetime.now()
-minuto_atual = grandma = agora.minute
+minuto_atual = agora.minute
 segundos = agora.second
 
 minutos_pagantes = [2, 5, 8, 10, 12, 15, 18, 20, 22, 25, 28, 30, 32, 35, 38, 40, 42, 45, 48, 50, 52, 55, 58, 0]
@@ -73,25 +73,22 @@ st.title("🎯 Sniper Ouro - Força Máxima")
 vela = st.number_input("Digite a última vela do gráfico:", min_value=0.0, format="%.2f", step=0.01)
 
 if st.button("CALCULAR PROBABILIDADE"):
-    # CORREÇÃO ABSOLUTA DA LOGICA: Contabiliza o sinal anterior antes de qualquer análise gráfica nova
-    if st.session_state.tipo_sinal_pendente == "ROXA":
-        st.session_state.sinais_emitidos_roxa += 1
+    # MATEMÁTICA PURA E DIRETA LOGO NO CLIQUE DO BOTÃO
+    if st.session_state.sinal_anterior == "ROXA":
+        st.session_state.tentativas_roxa += 1
         if vela >= 2.00:
-            st.session_state.acertos_roxas += 1
+            st.session_state.acertos_roxa += 1
         else:
-            st.session_state.nao_bateu_roxa += 1
+            st.session_state.erros_roxa += 1
             
-    elif st.session_state.tipo_sinal_pendente == "ROSA":
-        st.session_state.sinais_emitidos_rosa += 1
+    elif st.session_state.sinal_anterior == "ROSA":
+        st.session_state.tentativas_rosa += 1
         if vela >= 10.00:
-            st.session_state.acertos_rosas += 1
+            st.session_state.acertos_rosa += 1
         else:
-            st.session_state.nao_bateu_rosa += 1
-            
-    # Reseta o sinal pendente para dar lugar ao próximo processamento
-    st.session_state.tipo_sinal_pendente = None
+            st.session_state.erros_rosa += 1
 
-    # Segue com a alimentação do histórico tradicional
+    # Atualiza o histórico base do aplicativo
     st.session_state.historico.append(vela)
     st.session_state.distancia_rosa = 0 if vela >= 10.0 else st.session_state.distancia_rosa + 1
     
@@ -120,23 +117,25 @@ def verificar_perigo_banca(historico):
     return False
 
 bloqueio_banca_baixa = verificar_perigo_banca(st.session_state.historico)
+total_geral_erros = st.session_state.erros_roxa + st.session_state.erros_rosa
 
-# --- MOTORIZAÇÃO PRINCIPAL ---
+# --- MOTORIZAÇÃO PRINCIPAL DE SINAIS ---
 def processar_independente(historico):
     if len(historico) < 5: 
         return "ANALISANDO...", "wait-card", "ALIMENTANDO SESSÃO (INSIRA MAIS VELAS)", "---", None
     
+    # Se a amostragem estiver muito ruim, o robô manda parar para salvar a banca curta
+    if total_geral_erros >= 5 and (st.session_state.acertos_roxa / st.session_state.tentativas_roxa < 0.40 if st.session_state.tentativas_roxa > 0 else False):
+        return "PAUSAR OPERAÇÃO 🛑", "wait-card", "MERCADO FORA DE PADRÃO - PRESERVE SEU SALDO", "100%", None
+
     v_atual = historico[-1]
     total_azuis_janela = sum(1 for x in historico[-5:] if x < 2.0)
     
     if bloqueio_banca_baixa:
-        return "AGUARDAR ✋", "wait-card", "PROTEÇÃO BANCA BAIXA: MERCADO EM RECOLHIMENTO (NÃO FORCE)", "100%", None
+        return "AGUARDAR ✋", "wait-card", "PROTEÇÃO BANCA BAIXA: MERCADO EM RECOLHIMENTO", "100%", None
     
     if total_azuis_janela >= 4 and v_atual < 2.0:
         return "AGUARDAR ✋", "wait-card", "MERCADO EM RECOLHIMENTO PROFUNDO", "100%", None
-        
-    if len(historico) >= 3 and historico[-2] < 1.50 and historico[-3] < 1.50 and v_atual >= 2.0:
-        return "AGUARDAR ✋", "wait-card", "CONFIRMANDO MUDANÇA DE PADRÃO (AGUARDE MAIS UMA ROXA)", "98%", None
 
     decimal_str = f"{v_atual:.2f}"
     final_cinco = decimal_str.endswith('5')
@@ -160,48 +159,47 @@ def processar_independente(historico):
     if (gatilho_10x or gatilho_5x or final_cinco) and total_azuis_janela <= 2:
         return "ENTRAR (GATILHO DECIMAL) 🎯", "target-card", "CONFLUÊNCIA DE SUBIDA HISTÓRICA", "94%", "ROXA"
 
-    if v_atual < 1.15: return "AGUARDAR ✋", "wait-card", "VELA DE COMPRESSÃO EXTREMA (RISCO ALTO)", "99%", None
+    if v_atual < 1.15: return "AGUARDAR ✋", "wait-card", "VELA DE COMPRESSÃO EXTREMA", "99%", None
     return "AGUARDAR ✋", "wait-card", "PROCURANDO ESTABILIDADE NO CICLO", "---", None
 
-sinal, cor, status, conf, objetivo_sinal = processar_independente(st.session_state.historico)
+sinal, cor, status, conf, comando_emitido = processar_independente(st.session_state.historico)
 
-# Salva qual é o sinal atual na sessão para validar no próximo clique de botão
-if objetivo_sinal:
-    st.session_state.tipo_sinal_pendente = objetivo_sinal
+# Armazena na sessão o comando para validar obrigatoriamente na rodada seguinte
+st.session_state.sinal_anterior = comando_emitido
 
 # --- PAINEL EXIBIDO NA TELA ---
 st.markdown(f'<div class="status-card"><h3 style="color: #a855f7;">RADAR ROSA 🌸</h3><p>Distância Atual: {st.session_state.distancia_rosa} rodadas</p></div>', unsafe_allow_html=True)
 
-if bloqueio_banca_baixa:
+if bloqueio_banca_baixa and "PAUSAR" not in sinal:
     st.markdown('<div class="banca-card">🛡️ ALERTA DEFENSIVO DIRETRIZ: Sequência de Azuis detectada. Preserve seus R$10/R$20. Aguarde o gráfico pagar uma roxa estável!</div>', unsafe_allow_html=True)
 
 if avisos_mentora:
     for aviso in avisos_mentora: st.markdown(f'<div class="mentora-card">{aviso}</div>', unsafe_allow_html=True)
 
-st.markdown(f'<div class="{cor}"><h1 style="color: {"#00ff00" if objetivo_sinal else "#ef4444"};">{sinal}</h1><p>CONFIANÇA ADAPTATIVA: {conf}<br>DIRETRIZ MATEMÁTICA: {status}</p></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="{cor}"><h1 style="color: {"#00ff00" if comando_emitido else "#ef4444"};">{sinal}</h1><p>CONFIANÇA ADAPTATIVA: {conf}<br>DIRETRIZ MATEMÁTICA: {status}</p></div>', unsafe_allow_html=True)
 
-# --- 👑 PAINEL RANKING FIXADO ---
+# --- 👑 PAINEL RANKING PERFEITO SEM MÁSCARA ---
 st.markdown('<div class="ranking-card">', unsafe_allow_html=True)
 st.markdown('<h3 style="color: #f59e0b; text-align: center; margin-bottom: 5px;">👑 RANKING DE ASSERTIVIDADE REAL DA SESSÃO</h3>', unsafe_allow_html=True)
 
-emitidos_roxa = st.session_state.sinais_emitidos_roxa
-emitidos_rosa = st.session_state.sinais_emitidos_rosa
-total_erros = st.session_state.nao_bateu_roxa + st.session_state.nao_bateu_rosa
-total_geral_sinais = emitidos_roxa + emitidos_rosa
+t_roxa = st.session_state.tentativas_roxa
+t_rosa = st.session_state.tentativas_rosa
+total_geral_entradas = t_roxa + t_rosa
 
-pct_roxa = (st.session_state.acertos_roxas / emitidos_roxa * 100) if emitidos_roxa > 0 else 0.0
-pct_rosa = (st.session_state.acertos_rosas / emitidos_rosa * 100) if emitidos_rosa > 0 else 0.0
-pct_geral = ((st.session_state.acertos_roxas + st.session_state.acertos_rosas) / total_geral_sinais * 100) if total_geral_sinais > 0 else 0.0
+# Cálculo exato em percentual conforme o pedido do Alex
+pct_roxa = (st.session_state.acertos_roxa / t_roxa * 100) if t_roxa > 0 else 0.0
+pct_rosa = (st.session_state.acertos_rosa / t_rosa * 100) if t_rosa > 0 else 0.0
+pct_geral = ((st.session_state.acertos_roxa + st.session_state.acertos_rosa) / total_geral_entradas * 100) if total_geral_entradas > 0 else 0.0
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric(label="💜 ALVO VELAS ROXAS", value=f"{pct_roxa:.1f}%", delta=f"{st.session_state.acertos_roxas} de {emitidos_roxa} sinais")
+    st.metric(label="💜 ALVO VELAS ROXAS", value=f"{pct_roxa:.1f}%", delta=f"{st.session_state.acertos_roxa} acertos de {t_roxa} jogadas")
 with col2:
-    st.metric(label="🌸 ALVO VELAS ROSAS", value=f"{pct_rosa:.1f}%", delta=f"{st.session_state.acertos_rosas} de {emitidos_rosa} sinais")
+    st.metric(label="🌸 ALVO VELAS ROSAS", value=f"{pct_rosa:.1f}%", delta=f"{st.session_state.acertos_rosa} acertos de {t_rosa} jogadas")
 with col3:
-    st.metric(label="❌ TOTAL NÃO BATEU", value=f"{total_erros} vezes", delta=f"Roxas: {st.session_state.nao_bateu_roxa} | Rosas: {st.session_state.nao_bateu_rosa}", delta_color="inverse")
+    st.metric(label="❌ TOTAL NÃO BATEU", value=f"{total_geral_erros} vezes", delta=f"Roxas: {st.session_state.erros_roxa} | Rosas: {st.session_state.erros_rosa}", delta_color="inverse")
 
-st.markdown(f"<p style='text-align: center; color: #aaa; margin-top: 10px;'><b>Total Geral de Operações:</b> {total_geral_sinais} | <b>Eficiência Global do Robô:</b> <span style='color:#00ff00;'>{pct_geral:.1f}%</span></p>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align: center; color: #aaa; margin-top: 10px;'><b>Total de Entradas Efetuadas:</b> {total_geral_entradas} | <b>Assertividade Geral do Robô:</b> <span style='color:#00ff00;'>{pct_geral:.1f}%</span></p>", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
 # --- BOTÃO DE RESET ---
@@ -210,11 +208,11 @@ if st.button("Limpar Histórico e Reiniciar Estatísticas"):
     st.session_state.distancia_rosa = 0
     st.session_state.contador_reset = -1
     st.session_state.contador_regra13 = -1
-    st.session_state.tipo_sinal_pendente = None
-    st.session_state.sinais_emitidos_roxa = 0
-    st.session_state.sinais_emitidos_rosa = 0
-    st.session_state.acertos_roxas = 0
-    st.session_state.acertos_rosas = 0
-    st.session_state.nao_bateu_roxa = 0
-    st.session_state.nao_bateu_rosa = 0
+    st.session_state.sinal_anterior = None
+    st.session_state.tentativas_roxa = 0
+    st.session_state.tentativas_rosa = 0
+    st.session_state.acertos_roxa = 0
+    st.session_state.acertos_rosa = 0
+    st.session_state.erros_roxa = 0
+    st.session_state.erros_rosa = 0
     st.rerun()
