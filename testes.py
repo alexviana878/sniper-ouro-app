@@ -46,8 +46,8 @@ if 'distancia_rosa' not in st.session_state: st.session_state.distancia_rosa = 0
 if 'contador_reset' not in st.session_state: st.session_state.contador_reset = -1
 if 'contador_regra13' not in st.session_state: st.session_state.contador_regra13 = -1
 
-# Variáveis Isoladas de Assertividade (Correção do Alex)
-if 'tipo_sinal_pendente' not in st.session_state: st.session_state.tipo_sinal_pendente = None # Pode ser "ROXA" ou "ROSA"
+# Variáveis Isoladas de Assertividade
+if 'tipo_sinal_pendente' not in st.session_state: st.session_state.tipo_sinal_pendente = None 
 if 'sinais_emitidos_roxa' not in st.session_state: st.session_state.sinais_emitidos_roxa = 0
 if 'sinais_emitidos_rosa' not in st.session_state: st.session_state.sinais_emitidos_rosa = 0
 if 'acertos_roxas' not in st.session_state: st.session_state.acertos_roxas = 0
@@ -57,7 +57,7 @@ if 'nao_bateu_rosa' not in st.session_state: st.session_state.nao_bateu_rosa = 0
 
 # --- CRONOS TIMING & FILTRO DE MINUTOS PAGANTES ---
 agora = datetime.now()
-minuto_atual = agora.minute
+minuto_atual = grandma = agora.minute
 segundos = agora.second
 
 minutos_pagantes = [2, 5, 8, 10, 12, 15, 18, 20, 22, 25, 28, 30, 32, 35, 38, 40, 42, 45, 48, 50, 52, 55, 58, 0]
@@ -73,23 +73,25 @@ st.title("🎯 Sniper Ouro - Força Máxima")
 vela = st.number_input("Digite a última vela do gráfico:", min_value=0.0, format="%.2f", step=0.01)
 
 if st.button("CALCULAR PROBABILIDADE"):
-    # MATEMÁTICA CORRIGIDA PELO ALEX: Avalia o sinal baseado no objetivo exclusivo dele
+    # CORREÇÃO ABSOLUTA DA LOGICA: Contabiliza o sinal anterior antes de qualquer análise gráfica nova
     if st.session_state.tipo_sinal_pendente == "ROXA":
         st.session_state.sinais_emitidos_roxa += 1
         if vela >= 2.00:
             st.session_state.acertos_roxas += 1
         else:
             st.session_state.nao_bateu_roxa += 1
-        st.session_state.tipo_sinal_pendente = None
-
+            
     elif st.session_state.tipo_sinal_pendente == "ROSA":
         st.session_state.sinais_emitidos_rosa += 1
         if vela >= 10.00:
             st.session_state.acertos_rosas += 1
         else:
             st.session_state.nao_bateu_rosa += 1
-        st.session_state.tipo_sinal_pendente = None
+            
+    # Reseta o sinal pendente para dar lugar ao próximo processamento
+    st.session_state.tipo_sinal_pendente = None
 
+    # Segue com a alimentação do histórico tradicional
     st.session_state.historico.append(vela)
     st.session_state.distancia_rosa = 0 if vela >= 10.0 else st.session_state.distancia_rosa + 1
     
@@ -163,7 +165,7 @@ def processar_independente(historico):
 
 sinal, cor, status, conf, objetivo_sinal = processar_independente(st.session_state.historico)
 
-# Ativa o direcionamento do sinal pendente para a próxima rodada
+# Salva qual é o sinal atual na sessão para validar no próximo clique de botão
 if objetivo_sinal:
     st.session_state.tipo_sinal_pendente = objetivo_sinal
 
@@ -178,11 +180,10 @@ if avisos_mentora:
 
 st.markdown(f'<div class="{cor}"><h1 style="color: {"#00ff00" if objetivo_sinal else "#ef4444"};">{sinal}</h1><p>CONFIANÇA ADAPTATIVA: {conf}<br>DIRETRIZ MATEMÁTICA: {status}</p></div>', unsafe_allow_html=True)
 
-# --- 👑 PAINEL ATUALIZADO: RANKING INDEPENDENTE E ISOLADO POR SINAL ---
+# --- 👑 PAINEL RANKING FIXADO ---
 st.markdown('<div class="ranking-card">', unsafe_allow_html=True)
 st.markdown('<h3 style="color: #f59e0b; text-align: center; margin-bottom: 5px;">👑 RANKING DE ASSERTIVIDADE REAL DA SESSÃO</h3>', unsafe_allow_html=True)
 
-# Cálculos Isolados (Evitando distorções de denominador)
 emitidos_roxa = st.session_state.sinais_emitidos_roxa
 emitidos_rosa = st.session_state.sinais_emitidos_rosa
 total_erros = st.session_state.nao_bateu_roxa + st.session_state.nao_bateu_rosa
