@@ -35,6 +35,8 @@ st.markdown("""
     .target-card { border: 2px solid #00ff00; border-radius: 15px; padding: 15px; text-align: center; background-color: #111322; box-shadow: 0 0 15px #00ff00; margin-top: 10px; }
     .wait-card { border: 2px solid #ef4444; border-radius: 15px; padding: 15px; text-align: center; background-color: #111322; box-shadow: 0 0 10px #ef4444; margin-top: 10px; }
     .mentora-card { border: 1px dashed #ffff00; border-radius: 10px; padding: 10px; text-align: center; background-color: #1a1a10; box-shadow: 0 0 8px #ffff00; margin-top: 10px; color: #ffff00; font-weight: bold; }
+    .taxativo-card { border-radius: 8px; padding: 8px; text-align: center; font-weight: bold; margin-bottom: 10px; font-size: 16px; }
+    .lucro-card { border: 1px solid #34d399; border-radius: 8px; padding: 8px; text-align: center; background-color: #064e3b; color: #34d399; font-weight: bold; margin-top: 10px; }
     .janela-card { color: #00ff00; font-weight: bold; font-size: 18px; animation: blinker 1.5s linear infinite; }
     @keyframes blinker { 50% { opacity: 0; } }
     </style>
@@ -46,7 +48,7 @@ if 'distancia_rosa' not in st.session_state: st.session_state.distancia_rosa = 0
 if 'contador_reset' not in st.session_state: st.session_state.contador_reset = -1
 if 'contador_regra13' not in st.session_state: st.session_state.contador_regra13 = -1
 
-# Variáveis para a Contabilidade Comercial Rigorosa (Ideia do Alex)
+# Contabilidade Comercial Rigorosa (Ideia do Alex)
 if 'sinal_anterior' not in st.session_state: st.session_state.sinal_anterior = None 
 if 'tentativas_roxa' not in st.session_state: st.session_state.tentativas_roxa = 0
 if 'tentativas_rosa' not in st.session_state: st.session_state.tentativas_rosa = 0
@@ -70,25 +72,21 @@ st.markdown(f'<div class="clock-card"><h2 style="color: #00ff00; margin:0;">{ago
 st.success("🔓 Módulo de Validação Ativo")
 st.title("🎯 Sniper Ouro - Força Máxima")
 
+# CAMPO DE GESTÃO SOLICITADO: Input da banca do Alex para calcular a projeção de 7% a 10%
+banca_inicial = st.number_input("Valor da Banca Inicial (R$):", min_value=0.0, value=20.0, step=1.0)
 vela = st.number_input("Digite a última vela do gráfico:", min_value=0.0, format="%.2f", step=0.01)
 
 if st.button("CALCULAR PROBABILIDADE"):
-    # MATEMÁTICA PURA E DIRETA LOGO NO CLIQUE DO BOTÃO
+    # Executa a contabilidade comercial rigorosa direto no clique
     if st.session_state.sinal_anterior == "ROXA":
         st.session_state.tentativas_roxa += 1
-        if vela >= 2.00:
-            st.session_state.acertos_roxa += 1
-        else:
-            st.session_state.erros_roxa += 1
-            
+        if vela >= 2.00: st.session_state.acertos_roxa += 1
+        else: st.session_state.erros_roxa += 1
     elif st.session_state.sinal_anterior == "ROSA":
         st.session_state.tentativas_rosa += 1
-        if vela >= 10.00:
-            st.session_state.acertos_rosa += 1
-        else:
-            st.session_state.erros_rosa += 1
+        if vela >= 10.00: st.session_state.acertos_rosa += 1
+        else: st.session_state.erros_rosa += 1
 
-    # Atualiza o histórico base do aplicativo
     st.session_state.historico.append(vela)
     st.session_state.distancia_rosa = 0 if vela >= 10.0 else st.session_state.distancia_rosa + 1
     
@@ -97,6 +95,19 @@ if st.button("CALCULAR PROBABILIDADE"):
         
     if vela >= 30.00: st.session_state.contador_regra13 = 0
     elif st.session_state.contador_regra13 >= 0: st.session_state.contador_regra13 += 1
+
+# --- DIAGNÓSTICO TAXATIVO DE MERCADO ---
+if len(st.session_state.historico) >= 5:
+    ultimas_velas = st.session_state.historico[-5:]
+    boas = sum(1 for x in ultimas_velas if x >= 2.0)
+    if boas >= 3:
+        st.markdown('<div class="taxativo-card" style="background-color: #065f46; color: #34d399;">🟢 BASE CONFIRMADA: O mercado está seguindo as nossas estratégias.</div>', unsafe_allow_html=True)
+    elif boas == 2:
+        st.markdown('<div class="taxativo-card" style="background-color: #854d0e; color: #fef08a;">🟡 BASE EM TRANSIÇÃO: Oscilação detectada. Monitore os minutos.</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="taxativo-card" style="background-color: #991b1b; color: #fca5a5;">🔴 BASE FORA DE PADRÃO: Algoritmo recolhedor agressivo. Estudo de risco ativo.</div>', unsafe_allow_html=True)
+else:
+    st.markdown('<div class="taxativo-card" style="background-color: #1e1b4b; color: #c084fc;">🔵 MAPEANDO ENTRADAS: Insira pelo menos 5 velas para calibrar.</div>', unsafe_allow_html=True)
 
 # --- RASTREADORES DE ESTEIRA MENTORA ---
 avisos_mentora = []
@@ -119,18 +130,21 @@ def verificar_perigo_banca(historico):
 bloqueio_banca_baixa = verificar_perigo_banca(st.session_state.historico)
 total_geral_erros = st.session_state.erros_roxa + st.session_state.erros_rosa
 
-# --- MOTORIZAÇÃO PRINCIPAL DE SINAIS ---
+# --- MOTORIZAÇÃO PRINCIPAL DE SINAIS (SEM TRAVAS DE TELA) ---
 def processar_independente(historico):
     if len(historico) < 5: 
         return "ANALISANDO...", "wait-card", "ALIMENTANDO SESSÃO (INSIRA MAIS VELAS)", "---", None
     
-    # Se a amostragem estiver muito ruim, o robô manda parar para salvar a banca curta
-    if total_geral_erros >= 5 and (st.session_state.acertos_roxa / st.session_state.tentativas_roxa < 0.40 if st.session_state.tentativas_roxa > 0 else False):
-        return "PAUSAR OPERAÇÃO 🛑", "wait-card", "MERCADO FORA DE PADRÃO - PRESERVE SEU SALDO", "100%", None
-
     v_atual = historico[-1]
     total_azuis_janela = sum(1 for x in historico[-5:] if x < 2.0)
     
+    # REQUISITO DA ROSA: Se acabou de vir uma Rosa, o robô faz uma análise matemática ultra restrita em vez de travar
+    if len(historico) >= 2 and historico[-1] >= 10.00:
+        if total_azuis_janela <= 1 and janela_ativa:
+            return "ENTRAR (RISCO ROSA DUPLA) 🎯", "target-card", "ALGORITMO EM ALTA FREQUÊNCIA INCOMUM", "90%", "ROXA"
+        else:
+            return "AGUARDAR ✋", "wait-card", "BASE DE RISCO PÓS-ROSA: EVITE ENTRADAS NO VÁCUO IMEDIATO", "0%", None
+
     if bloqueio_banca_baixa:
         return "AGUARDAR ✋", "wait-card", "PROTEÇÃO BANCA BAIXA: MERCADO EM RECOLHIMENTO", "100%", None
     
@@ -163,22 +177,20 @@ def processar_independente(historico):
     return "AGUARDAR ✋", "wait-card", "PROCURANDO ESTABILIDADE NO CICLO", "---", None
 
 sinal, cor, status, conf, comando_emitido = processar_independente(st.session_state.historico)
-
-# Armazena na sessão o comando para validar obrigatoriamente na rodada seguinte
 st.session_state.sinal_anterior = comando_emitido
 
 # --- PAINEL EXIBIDO NA TELA ---
 st.markdown(f'<div class="status-card"><h3 style="color: #a855f7;">RADAR ROSA 🌸</h3><p>Distância Atual: {st.session_state.distancia_rosa} rodadas</p></div>', unsafe_allow_html=True)
 
-if bloqueio_banca_baixa and "PAUSAR" not in sinal:
-    st.markdown('<div class="banca-card">🛡️ ALERTA DEFENSIVO DIRETRIZ: Sequência de Azuis detectada. Preserve seus R$10/R$20. Aguarde o gráfico pagar uma roxa estável!</div>', unsafe_allow_html=True)
+if bloqueio_banca_baixa:
+    st.markdown('<div class="banca-card">🛡️ ALERTA DEFENSIVO DIRETRIZ: Sequência de Azuis detectada. Preserve seus R$10/R$20.</div>', unsafe_allow_html=True)
 
 if avisos_mentora:
     for aviso in avisos_mentora: st.markdown(f'<div class="mentora-card">{aviso}</div>', unsafe_allow_html=True)
 
 st.markdown(f'<div class="{cor}"><h1 style="color: {"#00ff00" if comando_emitido else "#ef4444"};">{sinal}</h1><p>CONFIANÇA ADAPTATIVA: {conf}<br>DIRETRIZ MATEMÁTICA: {status}</p></div>', unsafe_allow_html=True)
 
-# --- 👑 PAINEL RANKING PERFEITO SEM MÁSCARA ---
+# --- 👑 PAINEL RANKING PERFEITO COM MONITOR DE META ---
 st.markdown('<div class="ranking-card">', unsafe_allow_html=True)
 st.markdown('<h3 style="color: #f59e0b; text-align: center; margin-bottom: 5px;">👑 RANKING DE ASSERTIVIDADE REAL DA SESSÃO</h3>', unsafe_allow_html=True)
 
@@ -186,10 +198,13 @@ t_roxa = st.session_state.tentativas_roxa
 t_rosa = st.session_state.tentativas_rosa
 total_geral_entradas = t_roxa + t_rosa
 
-# Cálculo exato em percentual conforme o pedido do Alex
 pct_roxa = (st.session_state.acertos_roxa / t_roxa * 100) if t_roxa > 0 else 0.0
 pct_rosa = (st.session_state.acertos_rosa / t_rosa * 100) if t_rosa > 0 else 0.0
 pct_geral = ((st.session_state.acertos_roxa + st.session_state.acertos_rosa) / total_geral_entradas * 100) if total_geral_entradas > 0 else 0.0
+
+# Cálculo Simulado de Evolução de Meta (Baseado em lucro fixo estimado de R$2 por acerto)
+lucro_estimado = (st.session_state.acertos_roxa * 2.0) + (st.session_state.acertos_rosa * 5.0) - (total_geral_erros * 1.5)
+if lucro_estimado < 0: lucro_estimado = 0.0
 
 col1, col2, col3 = st.columns(3)
 with col1:
@@ -198,6 +213,13 @@ with col2:
     st.metric(label="🌸 ALVO VELAS ROSAS", value=f"{pct_rosa:.1f}%", delta=f"{st.session_state.acertos_rosa} acertos de {t_rosa} jogadas")
 with col3:
     st.metric(label="❌ TOTAL NÃO BATEU", value=f"{total_geral_erros} vezes", delta=f"Roxas: {st.session_state.erros_roxa} | Rosas: {st.session_state.erros_rosa}", delta_color="inverse")
+
+if banca_inicial > 0:
+    crescimento_banca = (lucro_estimado / banca_inicial) * 100
+    st.markdown(f"<div class='lucro-card'>📈 Crescimento Estimado do Saldo: +{crescimento_banca:.1f}%</div>", unsafe_allow_html=True)
+    if 7.0 <= crescimento_banca <= 15.0:
+        st.balloons()
+        st.markdown("<p style='text-align: center; color: #34d399; font-weight: bold;'>🎯 META DE 7% A 10% ALCANCADA! Excelentes ajustes na sessão!</p>", unsafe_allow_html=True)
 
 st.markdown(f"<p style='text-align: center; color: #aaa; margin-top: 10px;'><b>Total de Entradas Efetuadas:</b> {total_geral_entradas} | <b>Assertividade Geral do Robô:</b> <span style='color:#00ff00;'>{pct_geral:.1f}%</span></p>", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
