@@ -25,7 +25,7 @@ if not st.session_state.autenticado:
     senha = st.text_input("Digite sua chave:", type="password")
     
     if st.button("ATIVAR SISTEMA"):
-        if snha == SENHA_CORRETA or senha == SENHA_CORRETA: # Garante a validação da sua chave master
+        if senha == SENHA_CORRETA:
             st.session_state.autenticado = True
             st.success("Sistema liberado.")
             st.rerun()
@@ -34,7 +34,7 @@ if not st.session_state.autenticado:
     st.stop()
 
 # =========================================
-# CSS PREMIUM RE-ESTILIZADO (CORES DO PROJETO)
+# CSS PREMIUM (CORES DO PROJETO)
 # =========================================
 st.markdown("""
 <style>
