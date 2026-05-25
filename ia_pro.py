@@ -43,8 +43,9 @@ st.markdown("""
 .target-card { border: 2px solid #00ff00; border-radius: 15px; padding: 15px; text-align: center; background-color: #111322; box-shadow: 0 0 18px #00ff00; color: white; margin-bottom: 15px; }
 .wait-card { border: 2px solid #ef4444; border-radius: 15px; padding: 15px; text-align: center; background-color: #111322; box-shadow: 0 0 10px #ef4444; color: white; margin-bottom: 15px; }
 .ranking-card { border: 2px solid #f59e0b; border-radius: 15px; padding: 15px; background-color: #111322; box-shadow: 0 0 12px #f59e0b; margin-top: 20px; color: white; }
+.csv-card { border: 1px dashed #f59e0b; border-radius: 10px; padding: 15px; background-color: #1e1b4b; margin-bottom: 20px; }
 .clock-card { border: 1px solid #00ff00; border-radius: 10px; padding: 10px; text-align: center; background-color: #111322; box-shadow: 0 0 5px #00ff00; margin-bottom: 15px; }
-h1, h2, h3, p { color: white !important; }
+h1, h2, h3, p, label { color: white !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -72,9 +73,15 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+st.title("🎯 SNIPER OURO IA PRO")
+
 # =========================================================
-# FUNÇÕES DA ENGINE IA
+# 📂 NOVO ENGINE: IMPORTAÇÃO E TREINAMENTO EM MASSA VIA CSV
 # =========================================================
+st.markdown('<div class="csv-card">', unsafe_allow_html=True)
+st.markdown("### 📂 IMPORTAR E TREINAR BASE DE DADOS")
+arquivo = st.file_uploader("Envie seu arquivo histórico contendo as velas (1 por linha):", type=["csv", "txt"])
+
 def classificar_vela(valor):
     if valor < 2.0: return "B"
     elif valor < 10.0: return "M"
@@ -90,6 +97,37 @@ def salvar_padrao_na_memoria(padrao, resultado):
         "resultado": resultado
     })
 
+if arquivo is not None:
+    linhas = arquivo.read().decode("utf-8").splitlines()
+    contador = 0
+    
+    # Processa e alimenta em massa de forma ultra veloz
+    for linha in lines if 'lines' in locals() else linhas:
+        try:
+            limpo = linha.strip()
+            if not limpo: continue
+            valor = float(limpo.replace(",", "."))
+            
+            # Grava o padrão existente ANTES de embutir a nova vela
+            if len(st.session_state.historico) >= 4:
+                padrao_gerado = gerar_padrao(st.session_state.historico)
+                salvar_padrao_na_memoria(padrao_gerado, valor)
+                
+            st.session_state.historico.append(valor)
+            
+            if valor >= 10.0: st.session_state.distancia_rosa = 0
+            else: st.session_state.distancia_rosa += 1
+            
+            contador += 1
+        except:
+            pass
+            
+    st.success(f"🔥 Inteligência Alimentada! {contador} velas importadas com sucesso.")
+st.markdown('</div>', unsafe_allow_html=True)
+
+# =========================================================
+# FUNÇÕES DA ENGINE IA COGNITIVA
+# =========================================================
 def analisar_padroes():
     memoria = {}
     for registro in st.session_state.banco_padroes:
@@ -139,28 +177,25 @@ def processar_sinal(historico):
 
     score = calcular_score(historico, taxa_roxa, taxa_rosa)
 
+    # =========================================================
+    # CONFIGURAÇÃO PREMIUM EXIGENTE PRO CORRIGIDA (REGRA DE OURO)
+    # =========================================================
+    if score >= 14:
+        return f"💎 ENTRADA PREMIUM ({padrao})", "target-card", f"PADRÃO ELITE CRÍTICO | ROXA {taxa_roxa:.1f}% | ROSA {taxa_rosa:.1f}% | SCORE {score}", f"{min(score * 7, 99)}%", "ROXA"
     if score >= 11:
-        return f"💎 ENTRADA PREMIUM ({padrao})", "target-card", f"PADRÃO ELITE | ROXA {taxa_roxa:.1f}% | ROSA {taxa_rosa:.1f}% | SCORE {score}", f"{min(score * 8, 99)}%", "ROXA"
-    if score >= 8:
-        return f"⚠️ ENTRADA MODERADA ({padrao})", "status-card", f"PADRÃO BOM | ROXA {taxa_roxa:.1f}% | SCORE {score}", f"{min(score * 7, 95)}%", "ROXA"
+        return f"⚠️ ENTRADA MODERADA ({padrao})", "status-card", f"PADRÃO BOM | ROXA {taxa_roxa:.1f}% | SCORE {score}", f"{min(score * 6, 92)}%", "ROXA"
     if taxa_rosa >= 30 and st.session_state.distancia_rosa >= 10:
         return f"🌸 BUSCAR ROSA ({padrao})", "target-card", f"PRESSÃO ESTATÍSTICA PARA ROSA | {taxa_rosa:.1f}%", "92%", "ROSA"
     
-    return "AGUARDAR ✋", "wait-card", f"SEM CONFLUÊNCIA DE HISTÓRICO | SCORE {score}", "---", None
+    return "AGUARDAR ✋", "wait-card", f"SEM CONFLUÊNCIA DE SCORE ALTO (SCORE ATUAL: {score})", "---", None
 
 # =========================================================
-# INTERFACE DO USUÁRIO
+# ENTRADA DE DADOS EM TEMPO REAL (OPERAÇÃO)
 # =========================================================
-st.title("🎯 SNIPER OURO IA PRO")
-
 banca = st.number_input("Banca Inicial (R$):", min_value=0.0, value=20.0, step=1.0)
 vela = st.number_input("Digite a última vela:", min_value=0.0, format="%.2f", step=0.01)
 
-# =========================================================
-# BOTÃO PRINCIPAL E REGISTRO DE DADOS
-# =========================================================
 if st.button("CALCULAR PROBABILIDADE"):
-    # 1. Julga ganho/perda anterior antes de atualizar a tela
     if st.session_state.ultima_entrada == "ROXA":
         if vela >= 2.0: st.session_state.acertos += 1
         else: st.session_state.erros += 1
@@ -168,27 +203,22 @@ if st.button("CALCULAR PROBABILIDADE"):
         if vela >= 10.0: st.session_state.acertos += 1
         else: st.session_state.erros += 1
 
-    # 2. Salva o padrão gerado ANTES de anexar a vela atual no histórico
     if len(st.session_state.historico) >= 4:
         padrao_gerado = gerar_padrao(st.session_state.historico)
         salvar_padrao_na_memoria(padrao_gerado, vela)
 
-    # 3. Adiciona nova vela ao histórico geral
     st.session_state.historico.append(vela)
 
-    # 4. Atualiza a contagem do Radar Rosa
     if vela >= 10.0: st.session_state.distancia_rosa = 0
     else: st.session_state.distancia_rosa += 1
 
     st.rerun()
 
-# =========================================================
-# DIAGNÓSTICO DO SINAL ATUAL
-# =========================================================
+# EXECUÇÃO DO PROCESSO
 sinal, cor, status, conf, entrada_gerada = processar_sinal(st.session_state.historico)
 st.session_state.ultima_entrada = entrada_gerada
 
-# EXIBIÇÃO DO SINAL NA TELA
+# EXIBIÇÃO DO PAINEL PRINCIPAL
 st.markdown(f"""
 <div class="{cor}">
 <h1 style="margin:0; color: {'#00ff00' if 'ENTRADA' in sinal or 'BUSCAR' in sinal else '#ef4444'} !important;">{sinal}</h1>
@@ -204,7 +234,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# PAINEL DE ASSERTIVIDADE DA SESSÃO
+# SESSÃO REAL TIME RANKING
 total_jogadas = st.session_state.acertos + st.session_state.erros
 assertividade = (st.session_state.acertos / total_jogadas) * 100 if total_jogadas > 0 else 0.0
 
@@ -216,9 +246,7 @@ with col2: st.metric("❌ ERROS", st.session_state.erros)
 with col3: st.metric("📊 ASSERTIVIDADE", f"{assertividade:.1f}%")
 st.markdown("</div>", unsafe_allow_html=True)
 
-# =========================================================
-# MONITORAMENTO DINÂMICO DOS TOP PADRÕES
-# =========================================================
+# PAINEL DO REPOSITÓRIO TOP PADRÕES
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("""
 <div class="ranking-card">
@@ -229,11 +257,10 @@ memoria_mapeada = analisar_padroes()
 padrões_filtrados = []
 
 for pad, dados in memoria_mapeada.items():
-    if dados["total"] >= 3: # Filtra padrões que já aconteceram pelo menos 3 vezes na sessão
+    if dados["total"] >= 3: 
         taxa_sucesso = (dados["roxa"] / dados["total"]) * 100
         padrões_filtrados.append({"padrao": pad, "taxa": taxa_sucesso, "acertos": dados["roxa"], "total": dados["total"]})
 
-# Ordena os melhores padrões de cima para baixo
 padrões_filtrados = sorted(padrões_filtrados, key=lambda k: k['taxa'], reverse=True)[:5]
 
 if padrões_filtrados:
@@ -244,14 +271,14 @@ if padrões_filtrados:
         </p>
         """, unsafe_allow_html=True)
 else:
-    st.markdown("<p style='color:#888; text-align:center; margin:0;'>Alimente a IA para mapear o comportamento e listar os padrões de elite.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#888; text-align:center; margin:0;'>Suba o arquivo CSV de treinamento para mapear a inteligência preditiva.</p>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# EXIBIÇÃO DA LINHA DO TEMPO DAS VELAS
+# MONITORAMENTO DA RETROALIMENTAÇÃO GRÁFICA
 if len(st.session_state.historico) > 0:
     st.markdown("<p style='margin-top:15px;color:#888;'><b>Base de Dados Atualizada:</b> " + " → ".join([f"[{v}]" for v in st.session_state.historico[-12:]]) + "</p>", unsafe_allow_html=True)
 
-# REINICIAR TUDO
+# RESET DE SEGURANÇA
 st.markdown("<br>", unsafe_allow_html=True)
 if st.button("REINICIAR SISTEMA"):
     st.session_state.historico = []
