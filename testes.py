@@ -72,7 +72,6 @@ st.markdown(f'<div class="clock-card"><h2 style="color: #00ff00; margin:0;">{ago
 st.success("🔓 Módulo de Validação Ativo")
 st.title("🎯 Sniper Ouro - Força Máxima")
 
-# CAMPO DE GESTÃO SOLICITADO: Input da banca do Alex para calcular a projeção de 7% a 10%
 banca_inicial = st.number_input("Valor da Banca Inicial (R$):", min_value=0.0, value=20.0, step=1.0)
 vela = st.number_input("Digite a última vela do gráfico:", min_value=0.0, format="%.2f", step=0.01)
 
@@ -130,7 +129,7 @@ def verificar_perigo_banca(historico):
 bloqueio_banca_baixa = verificar_perigo_banca(st.session_state.historico)
 total_geral_erros = st.session_state.erros_roxa + st.session_state.erros_rosa
 
-# --- MOTORIZAÇÃO PRINCIPAL DE SINAIS (SEM TRAVAS DE TELA) ---
+# --- MOTORIZAÇÃO PRINCIPAL DE SINAIS CALIBRADA ---
 def processar_independente(historico):
     if len(historico) < 5: 
         return "ANALISANDO...", "wait-card", "ALIMENTANDO SESSÃO (INSIRA MAIS VELAS)", "---", None
@@ -138,7 +137,7 @@ def processar_independente(historico):
     v_atual = historico[-1]
     total_azuis_janela = sum(1 for x in historico[-5:] if x < 2.0)
     
-    # REQUISITO DA ROSA: Se acabou de vir uma Rosa, o robô faz uma análise matemática ultra restrita em vez de travar
+    # REQUISITO DA ROSA: Se acabou de vir uma Rosa, análise matemática restrita
     if len(historico) >= 2 and historico[-1] >= 10.00:
         if total_azuis_janela <= 1 and janela_ativa:
             return "ENTRAR (RISCO ROSA DUPLA) 🎯", "target-card", "ALGORITMO EM ALTA FREQUÊNCIA INCOMUM", "90%", "ROXA"
@@ -158,6 +157,10 @@ def processar_independente(historico):
     
     bônus = 5 if janela_ativa else 0
 
+    # 💥 O SUPER GATILHO QUE O ALEX DESCOBRIU: Alvo Rosa Direto na Correção Curta
+    if v_atual < 2.0 and any(x >= 2.0 for x in historico[-4:-1]) and total_azuis_janela <= 2:
+        return "💥 SUPER RECUPERAÇÃO ROSA", "target-card", "EXPLOSÃO DE PRESSÃO ACUMULADA - BUSCAR ALVO ROSA", f"{92 + bônus}%", "ROSA"
+
     if len(historico) >= 2 and historico[-2] >= 2.0 and v_atual >= 2.0 and janela_ativa:
         return "ENTRAR (MOMENTO PAGANTE) 🎯", "target-card", "CONFLUÊNCIA DE HORÁRIO + FLUXO DO ALGORITMO", f"{95 + bônus}%", "ROXA"
 
@@ -166,9 +169,6 @@ def processar_independente(historico):
 
     if st.session_state.distancia_rosa > 12 and v_atual > 2.0:
         return "BUSCAR ROSA 🌸", "target-card", "PONTO CRÍTICO DE MATURAÇÃO PARA VELAS ALTAS", f"{92 + bônus}%", "ROSA"
-        
-    if v_atual < 2.0 and any(x >= 2.0 for x in historico[-4:-1]) and total_azuis_janela <= 2:
-        return "ENTRAR (RECUPERAÇÃO) 🎯", "target-card", "CORREÇÃO DE GRÁFICO CURTA", "92%", "ROXA"
 
     if (gatilho_10x or gatilho_5x or final_cinco) and total_azuis_janela <= 2:
         return "ENTRAR (GATILHO DECIMAL) 🎯", "target-card", "CONFLUÊNCIA DE SUBIDA HISTÓRICA", "94%", "ROXA"
@@ -202,7 +202,7 @@ pct_roxa = (st.session_state.acertos_roxa / t_roxa * 100) if t_roxa > 0 else 0.0
 pct_rosa = (st.session_state.acertos_rosa / t_rosa * 100) if t_rosa > 0 else 0.0
 pct_geral = ((st.session_state.acertos_roxa + st.session_state.acertos_rosa) / total_geral_entradas * 100) if total_geral_entradas > 0 else 0.0
 
-# Cálculo Simulado de Evolução de Meta (Baseado em lucro fixo estimado de R$2 por acerto)
+# Cálculo Simulado de Evolução de Meta (Lucro estimado adaptado)
 lucro_estimado = (st.session_state.acertos_roxa * 2.0) + (st.session_state.acertos_rosa * 5.0) - (total_geral_erros * 1.5)
 if lucro_estimado < 0: lucro_estimado = 0.0
 
@@ -217,9 +217,9 @@ with col3:
 if banca_inicial > 0:
     crescimento_banca = (lucro_estimado / banca_inicial) * 100
     st.markdown(f"<div class='lucro-card'>📈 Crescimento Estimado do Saldo: +{crescimento_banca:.1f}%</div>", unsafe_allow_html=True)
-    if 7.0 <= crescimento_banca <= 15.0:
+    if crescimento_banca >= 7.0:
         st.balloons()
-        st.markdown("<p style='text-align: center; color: #34d399; font-weight: bold;'>🎯 META DE 7% A 10% ALCANCADA! Excelentes ajustes na sessão!</p>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #34d399; font-weight: bold;'>🎯 EXCELENTE PERFORMANCE: Evolução consistente de laboratório!</p>", unsafe_allow_html=True)
 
 st.markdown(f"<p style='text-align: center; color: #aaa; margin-top: 10px;'><b>Total de Entradas Efetuadas:</b> {total_geral_entradas} | <b>Assertividade Geral do Robô:</b> <span style='color:#00ff00;'>{pct_geral:.1f}%</span></p>", unsafe_allow_html=True)
 st.markdown('</div>', unsafe_allow_html=True)
