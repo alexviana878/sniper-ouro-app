@@ -20,10 +20,7 @@ if "autenticado" not in st.session_state:
 
 if not st.session_state.autenticado:
     st.markdown("<h1 style='text-align:center;color:#ef4444;'>🔒 SISTEMA PROTEGIDO</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center;color:#888;'>Insira a chave master de laboratório.</p>", unsafe_allow_html=True)
-    
     senha = st.text_input("Digite sua chave:", type="password")
-    
     if st.button("ATIVAR SISTEMA"):
         if senha == SENHA_CORRETA:
             st.session_state.autenticado = True
@@ -50,7 +47,7 @@ h1, h2, h3, p, label { color: white !important; }
 """, unsafe_allow_html=True)
 
 # =========================================================
-# INICIALIZAÇÃO DA MEMÓRIA VIVA (SESSION STATE)
+# SESSION STATE
 # =========================================================
 if "historico" not in st.session_state: st.session_state.historico = []
 if "banco_padroes" not in st.session_state: st.session_state.banco_padroes = []
@@ -60,7 +57,7 @@ if "erros" not in st.session_state: st.session_state.erros = 0
 if "ultima_entrada" not in st.session_state: st.session_state.ultima_entrada = None
 
 # =========================================================
-# RELÓGIO COGNITIVO
+# RELÓGIO
 # =========================================================
 agora = datetime.now()
 minutos_pagantes = [2,5,8,10,12,15,18,20,22,25,28,30,32,35,38,40,42,45,48,50,52,55,58,0]
@@ -76,20 +73,16 @@ st.markdown(f"""
 st.title("🎯 SNIPER OURO IA PRO")
 
 # =========================================================
-# 📂 NOVO ENGINE: IMPORTAÇÃO E TREINAMENTO EM MASSA VIA CSV
+# FUNÇÕES DA ENGINE IA
 # =========================================================
-st.markdown('<div class="csv-card">', unsafe_allow_html=True)
-st.markdown("### 📂 IMPORTAR E TREINAR BASE DE DADOS")
-arquivo = st.file_uploader("Envie seu arquivo histórico contendo as velas (1 por linha):", type=["csv", "txt"])
-
 def classificar_vela(valor):
     if valor < 2.0: return "B"
     elif valor < 10.0: return "M"
     return "A"
 
 def gerar_padrao(historico):
-    if len(historico) < 4: return None
-    return "-".join([classificar_vela(v) for v in historico[-4:]])
+    if len(historico) < 5: return None
+    return "-".join([classificar_vela(v) for v in historico[-5:]])
 
 def salvar_padrao_na_memoria(padrao, resultado):
     st.session_state.banco_padroes.append({
@@ -97,67 +90,72 @@ def salvar_padrao_na_memoria(padrao, resultado):
         "resultado": resultado
     })
 
-if arquivo is not None:
+# =========================================================
+# IMPORTAÇÃO CSV (SINCRONIZAÇÃO CORRIGIDA)
+# =========================================================
+st.markdown('<div class="csv-card">', unsafe_allow_html=True)
+st.markdown("### 📂 IMPORTAR E TREINAR BASE DE DADOS")
+arquivo = st.file_uploader("Envie seu histórico:", type=["csv", "txt"])
+
+if arquivo is not None and len(st.session_state.historico) == 0:
     linhas = arquivo.read().decode("utf-8").splitlines()
     contador = 0
     
-    # Processa e alimenta em massa de forma ultra veloz
-    for linha in lines if 'lines' in locals() else linhas:
+    for linha in linhas:
         try:
             limpo = linha.strip()
             if not limpo: continue
             valor = float(limpo.replace(",", "."))
             
-            # Grava o padrão existente ANTES de embutir a nova vela
-            if len(st.session_state.historico) >= 4:
-                padrao_gerado = gerar_padrao(st.session_state.historico)
-                salvar_padrao_na_memoria(padrao_gerado, valor)
+            # Sincronização Perfeita: Registra o padrão existente antes de empurrar a nova vela
+            if len(st.session_state.historico) >= 5:
+                padrao_existente = gerar_padrao(st.session_state.historico)
+                salvar_padrao_na_memoria(padrao_existente, valor)
                 
             st.session_state.historico.append(valor)
             
             if valor >= 10.0: st.session_state.distancia_rosa = 0
             else: st.session_state.distancia_rosa += 1
-            
             contador += 1
         except:
             pass
-            
-    st.success(f"🔥 Inteligência Alimentada! {contador} velas importadas com sucesso.")
+    st.success(f"🔥 {contador} velas importadas e calibradas com sucesso.")
 st.markdown('</div>', unsafe_allow_html=True)
 
 # =========================================================
-# FUNÇÕES DA ENGINE IA COGNITIVA
+# ANALISADOR DE PADRÕES
 # =========================================================
 def analisar_padroes():
     memoria = {}
     for registro in st.session_state.banco_padroes:
         padrao = registro["padrao"]
         resultado = registro["resultado"]
-
         if padrao not in memoria:
             memoria[padrao] = {"total": 0, "roxa": 0, "rosa": 0, "erro": 0}
-
+        
         memoria[padrao]["total"] += 1
         if resultado >= 2.0: memoria[padrao]["roxa"] += 1
         else: memoria[padrao]["erro"] += 1
         if resultado >= 10.0: memoria[padrao]["rosa"] += 1
     return memoria
 
-def calcular_score(historico, taxa_roxa, taxa_rosa):
+def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
     score = 0
     if len(historico) == 0: return 0
     v_atual = historico[-1]
     total_azuis = sum(1 for x in historico[-5:] if x < 2.0)
 
     if janela_ativa: score += 2
-    if taxa_roxa >= 70: score += 4
-    if taxa_roxa >= 85: score += 3
-    if taxa_rosa >= 20: score += 3
-    if st.session_state.distancia_rosa >= 12: score += 2
+    if taxa_roxa >= 55: score += 3
+    if taxa_roxa >= 70: score += 2
+    if taxa_rosa >= 20: score += 2
+    if st.session_state.distancia_rosa >= 10: score += 2
     if total_azuis <= 2: score += 2
     if total_azuis >= 4: score -= 5
     if v_atual < 1.15: score -= 4
     if len(historico) >= 2 and historico[-2] >= 2.0: score += 2
+    if ocorrencias >= 20: score += 2
+    if ocorrencias >= 50: score += 3
     return score
 
 def processar_sinal(historico):
@@ -175,22 +173,23 @@ def processar_sinal(historico):
             taxa_roxa = (dados["roxa"] / ocorrencias) * 100
             taxa_rosa = (dados["rosa"] / ocorrencias) * 100
 
-    score = calcular_score(historico, taxa_roxa, taxa_rosa)
+    if ocorrencias < 3:
+        return "AGUARDAR ✋", "wait-card", f"PADRÃO REMOTO ({padrao if padrao else '---'}) | SEM BASE DE DADOS SUFICIENTE", "---", None
 
-    # =========================================================
-    # CONFIGURAÇÃO PREMIUM EXIGENTE PRO CORRIGIDA (REGRA DE OURO)
-    # =========================================================
-    if score >= 14:
+    score = calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias)
+
+    # NÍVEIS PROFISSIONAIS AGRESSIVOS DE CONFLUÊNCIA (REGRA DE OURO)
+    if score >= 14 and taxa_roxa >= 65:
         return f"💎 ENTRADA PREMIUM ({padrao})", "target-card", f"PADRÃO ELITE CRÍTICO | ROXA {taxa_roxa:.1f}% | ROSA {taxa_rosa:.1f}% | SCORE {score}", f"{min(score * 7, 99)}%", "ROXA"
-    if score >= 11:
+    if score >= 11 and taxa_roxa >= 55:
         return f"⚠️ ENTRADA MODERADA ({padrao})", "status-card", f"PADRÃO BOM | ROXA {taxa_roxa:.1f}% | SCORE {score}", f"{min(score * 6, 92)}%", "ROXA"
-    if taxa_rosa >= 30 and st.session_state.distancia_rosa >= 10:
-        return f"🌸 BUSCAR ROSA ({padrao})", "target-card", f"PRESSÃO ESTATÍSTICA PARA ROSA | {taxa_rosa:.1f}%", "92%", "ROSA"
+    if taxa_rosa >= 25 and st.session_state.distancia_rosa >= 10:
+        return f"🌸 BUSCAR ROSA ({padrao})", "target-card", f"PRESSÃO ESTATÍSTICA ROSA {taxa_rosa:.1f}%", "92%", "ROSA"
     
-    return "AGUARDAR ✋", "wait-card", f"SEM CONFLUÊNCIA DE SCORE ALTO (SCORE ATUAL: {score})", "---", None
+    return "AGUARDAR ✋", "wait-card", f"SEM CONFLUÊNCIA DE SCORE ALTO (SCORE ATUAL: {score} | OCORRÊNCIAS: {ocorrencias})", "---", None
 
 # =========================================================
-# ENTRADA DE DADOS EM TEMPO REAL (OPERAÇÃO)
+# ENTRADA MANUAL REAL-TIME
 # =========================================================
 banca = st.number_input("Banca Inicial (R$):", min_value=0.0, value=20.0, step=1.0)
 vela = st.number_input("Digite a última vela:", min_value=0.0, format="%.2f", step=0.01)
@@ -203,7 +202,7 @@ if st.button("CALCULAR PROBABILIDADE"):
         if vela >= 10.0: st.session_state.acertos += 1
         else: st.session_state.erros += 1
 
-    if len(st.session_state.historico) >= 4:
+    if len(st.session_state.historico) >= 5:
         padrao_gerado = gerar_padrao(st.session_state.historico)
         salvar_padrao_na_memoria(padrao_gerado, vela)
 
@@ -218,7 +217,7 @@ if st.button("CALCULAR PROBABILIDADE"):
 sinal, cor, status, conf, entrada_gerada = processar_sinal(st.session_state.historico)
 st.session_state.ultima_entrada = entrada_gerada
 
-# EXIBIÇÃO DO PAINEL PRINCIPAL
+# EXIBIÇÃO DO SINAL NA TELA
 st.markdown(f"""
 <div class="{cor}">
 <h1 style="margin:0; color: {'#00ff00' if 'ENTRADA' in sinal or 'BUSCAR' in sinal else '#ef4444'} !important;">{sinal}</h1>
@@ -229,35 +228,32 @@ st.markdown(f"""
 # EXIBIÇÃO DO RADAR ROSA
 st.markdown(f"""
 <div class="status-card">
-<h3 style="color:#a855f7 !important; margin:0;">🌸 RADAR ROSA</h3>
-<p style="margin:5px 0 0 0;">Distância Atual: <b>{st.session_state.distancia_rosa}</b> rodadas sem velas altas</p>
+<h3 style="margin:0;">🌸 RADAR ROSA</h3>
+<p style="margin:5px 0 0 0;">Distância Atual: <b>{st.session_state.distancia_rosa}</b></p>
 </div>
 """, unsafe_allow_html=True)
 
-# SESSÃO REAL TIME RANKING
+# RENDIMENTO DA SESSÃO
 total_jogadas = st.session_state.acertos + st.session_state.erros
 assertividade = (st.session_state.acertos / total_jogadas) * 100 if total_jogadas > 0 else 0.0
 
 st.markdown('<div class="ranking-card">', unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; font-weight:bold; color:#f59e0b !important; margin:0 0 10px 0;'>👑 PERFORMANCE DA SESSÃO IA PRO</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-weight:bold; color:#f59e0b !important; margin:0 0 10px 0;'>👑 PERFORMANCE IA PRO</p>", unsafe_allow_html=True)
 col1, col2, col3 = st.columns(3)
 with col1: st.metric("✅ ACERTOS", st.session_state.acertos)
 with col2: st.metric("❌ ERROS", st.session_state.erros)
 with col3: st.metric("📊 ASSERTIVIDADE", f"{assertividade:.1f}%")
 st.markdown("</div>", unsafe_allow_html=True)
 
-# PAINEL DO REPOSITÓRIO TOP PADRÕES
+# REPOSITÓRIO DINÂMICO DOS TOP PADRÕES
 st.markdown("<br>", unsafe_allow_html=True)
-st.markdown("""
-<div class="ranking-card">
-<h3 style='text-align:center; color:#00ff00 !important; margin:0 0 15px 0;'>🏆 TOP PADRÕES DO LABORATÓRIO</h3>
-""", unsafe_allow_html=True)
+st.markdown('<div class="ranking-card"><h3 style="text-align:center; color:#00ff00 !important; margin:0 0 15px 0;">🏆 TOP PADRÕES</h3>', unsafe_allow_html=True)
 
 memoria_mapeada = analisar_padroes()
 padrões_filtrados = []
 
 for pad, dados in memoria_mapeada.items():
-    if dados["total"] >= 3: 
+    if dados["total"] >= 5: 
         taxa_sucesso = (dados["roxa"] / dados["total"]) * 100
         padrões_filtrados.append({"padrao": pad, "taxa": taxa_sucesso, "acertos": dados["roxa"], "total": dados["total"]})
 
@@ -267,18 +263,18 @@ if padrões_filtrados:
     for item in padrões_filtrados:
         st.markdown(f"""
         <p style='color:white; margin:5px 0;'>
-        💎 <b>{item['padrao']}</b> → <span style='color:#00ff00;'>{item['taxa']:.1f}%</span> de assertividade ({item['acertos']}/{item['total']})
+        💎 <b>{item['padrao']}</b> → <span style='color:#00ff00;'>{item['taxa']:.1f}%</span> ({item['acertos']}/{item['total']})
         </p>
         """, unsafe_allow_html=True)
 else:
-    st.markdown("<p style='color:#888; text-align:center; margin:0;'>Suba o arquivo CSV de treinamento para mapear a inteligência preditiva.</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#888; text-align:center; margin:0;'>IMPORTE UM CSV PARA TREINAR A IA</p>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# MONITORAMENTO DA RETROALIMENTAÇÃO GRÁFICA
+# LINHA DE EVOLUÇÃO TEMPORAL
 if len(st.session_state.historico) > 0:
-    st.markdown("<p style='margin-top:15px;color:#888;'><b>Base de Dados Atualizada:</b> " + " → ".join([f"[{v}]" for v in st.session_state.historico[-12:]]) + "</p>", unsafe_allow_html=True)
+    st.markdown("<p style='margin-top:15px;color:#888;'><b>Base Atual:</b> " + " → ".join([f"[{v}]" for v in st.session_state.historico[-12:]]) + "</p>", unsafe_allow_html=True)
 
-# RESET DE SEGURANÇA
+# RESET
 st.markdown("<br>", unsafe_allow_html=True)
 if st.button("REINICIAR SISTEMA"):
     st.session_state.historico = []
