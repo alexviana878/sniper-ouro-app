@@ -93,7 +93,7 @@ def salvar_padrao(padrao, resultado):
 # =========================================================
 # 📂 TREINAMENTO VIA CSV COM ENGINE DE PESO TEMPORAL
 # =========================================================
-st.markdown('<div class="main-card"><h3>📂 TREINAR INTELIGÊNCIA</h3></div>', unsafe_allow_html=True)
+st.markdown('<div class="main-card">### 📂 TREINAR INTELIGÊNCIA</div>', unsafe_allow_html=True)
 arquivo = st.file_uploader("Envie CSV/TXT com 1 vela por linha:", type=["csv", "txt"])
 
 if arquivo is not None and len(st.session_state.historico) == 0:
@@ -108,15 +108,14 @@ if arquivo is not None and len(st.session_state.historico) == 0:
         
     total_velas = len(velas_carga)
     
-    # Injeção Inteligente Baseada no Humor Atual do Fluxo (Machine Learning)
+    # Injeção Inteligente com Peso Temporal
     for idx, valor in enumerate(velas_carga):
         distancia_do_fim = total_velas - idx
         
-        if distancia_do_fim <= 300: peso = 5       # Últimas 300 rodadas (Peso Crítico)
-        elif distancia_do_fim <= 1000: peso = 3    # Médias 1000 rodadas
-        else: peso = 1                             # Histórico de fundo
+        if distancia_do_fim <= 300: peso = 5       
+        elif distancia_do_fim <= 1000: peso = 3    
+        else: peso = 1                             
         
-        # Sincronização Perfeita: Captura o padrão anterior antes de registrar o resultado
         if len(st.session_state.historico) >= 5:
             padrao_existente = gerar_padrao(st.session_state.historico)
             for _ in range(peso):
@@ -128,38 +127,7 @@ if arquivo is not None and len(st.session_state.historico) == 0:
     st.success(f"🔥 {total_velas} velas integradas e calibradas com matriz de peso.")
 
 # =========================================================
-# ANALISADOR DE PADRÕES (UPGRADE DEFAULTDICT ULTRA RÁPIDO)
+# ANALISADOR DE PADRÕES (UPGRADE DEFAULTDICT)
 # =========================================================
 def analisar_padroes():
-    memoria = defaultdict(lambda: {"total": 0, "roxa": 0, "rosa": 0, "erro": 0})
-    for registro in st.session_state.banco_padroes:
-        padrao = registro["padrao"]
-        resultado = registro["resultado"]
-
-        memoria[padrao]["total"] += 1
-        if resultado >= 2.0: memoria[padrao]["roxa"] += 1
-        else: memoria[padrao]["erro"] += 1
-        if resultado >= 10.0: memoria[padrao]["rosa"] += 1
-    return memoria
-
-# =========================================================
-# SCORE EXTREMO RIGOROSO
-# =========================================================
-def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
-    score = 0
-    if len(historico) < 5: return 0
-
-    v_atual = historico[-1]
-    ultimas5 = historico[-5:]
-
-    azuis = sum(1 for x in ultimas5 if x < 2.0)
-    extremos = sum(1 for x in ultimas5 if x < 1.20)
-
-    # Penalidades Críticas de Campo
-    if azuis >= 4: score -= 10
-    if extremos >= 2: score -= 8
-    if v_atual < 1.10: score -= 10
-
-    # Confluências Adaptativas
-    if taxa_roxa >= 83: score += 6
-    if taxa_ro
+    memoria = defaultdict(lambda: {"total": 0, "roxa": 0
