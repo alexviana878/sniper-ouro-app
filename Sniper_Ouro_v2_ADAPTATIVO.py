@@ -100,8 +100,8 @@ janela_ativa = agora.minute in minutos_pagantes
 
 st.markdown(f"""
 <div class="clock-card">
-<h2 style='color:#00ff66 !important;margin:0;'>{agora.strftime("%H:%M:%S")}</h2>
-<p style='margin:0;color:#00ff66 !important;'>{"⚠️ ZONA PAGANTE" if janela_ativa else "MONITORANDO MERCADO"}</p>
+<h2 style="color:#00ff66 !important;margin:0;">{agora.strftime("%H:%M:%S")}</h2>
+<p style="margin:0;color:#00ff66 !important;">{"⚠️ ZONA PAGANTE" if janela_ativa else "MONITORANDO MERCADO"}</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -185,7 +185,6 @@ def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
     return score
 
 def processar_sinal(historico):
-    # CORRIGIDO: Retorna strings limpas sem travar a renderização gráfica do painel
     if len(historico) < 30:
         return ("ANALISANDO...", "red-card", f"Sistema coletando dados ({len(historico)}/30)", "---", None)
 
@@ -207,111 +206,3 @@ def processar_sinal(historico):
         return ("🚫 POUCA AMOSTRAGEM", "red-card", f"{ocorrencias} ocorrências em base", "---", None)
 
     if taxa_roxa < 70:
-        return ("🚫 SEM FORÇA ESTATÍSTICA", "red-card", f"Taxa de acerto recente baixa ({taxa_roxa:.1f}%)", "---", None)
-
-    score = calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias)
-
-    if score < 12:
-        return ("🚫 SCORE ADAPTATIVO BAIXO", "red-card", f"Score atual: {score}/12 mínimo", "---", None)
-
-    if score >= 20:
-        return (f"💎 ENTRADA EXTREMA ({padrao})", "green-card", f"ROXA {taxa_roxa:.1f}% | SCORE {score}", "99%", "ROXA")
-    if score >= 14:
-        return (f"⚡ ENTRADA SNIPER ({padrao})", "main-card", f"ROXA {taxa_roxa:.1f}% | SCORE {score}", "92%", "ROXA")
-    if taxa_rosa >= 25 and st.session_state.distancia_rosa >= 10:
-        return (f"🌸 BUSCAR ROSA ({padrao})", "green-card", f"CHANCE ROSA {taxa_rosa:.1f}%", "94%", "ROSA")
-
-    return ("AGUARDAR ✋", "red-card", "Sem confluência contextual", "---", None)
-
-# EXECUÇÃO DO MOTOR LÓGICO
-sinal, cor, status, confianca, entrada = processar_sinal(st.session_state.historico)
-st.session_state.ultima_entrada = entrada
-st.session_state.padr_disparado = gerar_padrao(st.session_state.historico)
-
-# =========================================================
-# INTERFACE EXIBIDA DESDE O INÍCIO (INPUTS DESBLOQUEADOS)
-# =========================================================
-st.markdown("<br>", unsafe_allow_html=True)
-vela = st.number_input("Digite a última vela:", min_value=0.0, format="%.2f", step=0.01)
-
-if st.button("CALCULAR PROBABILIDADE"):
-    padr_avaliado = st.session_state.padr_disparado
-    if st.session_state.ultima_entrada in ["ROXA", "ROSA"] and padr_avaliado:
-        is_win = (st.session_state.ultima_entrada == "ROXA" and vela >= 2) or \
-                 (st.session_state.ultima_entrada == "ROSA" and vela >= 10)
-        if is_win:
-            st.session_state.acertos += 1
-            st.session_state.ultimos_resultados.append("WIN")
-            if padr_avaliado in st.session_state.bloqueados:
-                st.session_state.bloqueados[padr_avaliado] = max(0, st.session_state.bloqueados[padr_avaliado] - 1)
-        else:
-            st.session_state.erros += 1
-            st.session_state.ultimos_resultados.append("LOSS")
-            if padr_avaliado not in st.session_state.bloqueados: st.session_state.bloqueados[padr_avaliado] = 0
-            st.session_state.bloqueados[padr_avaliado] += 1
-
-    if len(st.session_state.historico) >= 5:
-        padrao_atual = gerar_padrao(st.session_state.historico)
-        salvar_padrao(padrao_atual, vela)
-
-    st.session_state.historico.append(vela)
-    if vela >= 10: st.session_state.distancia_rosa = 0
-    else: st.session_state.distancia_rosa += 1
-
-    salvar_memoria()
-    st.rerun()
-
-# PAINEL PRINCIPAL DO SINAL
-st.markdown(f"""
-<div class="{cor}">
-<h1>{sinal}</h1>
-<p><b>CONFIANÇA:</b> {confianca}<br><b>STATUS:</b> {status}</p>
-</div>
-""", unsafe_allow_html=True)
-
-# PERFORMANCE DA IA
-total = st.session_state.acertos + st.session_state.erros
-assertividade = (st.session_state.acertos / total) * 100 if total > 0 else 0
-
-st.markdown('<div class="gold-card"><h3 style='text-align:center;'>👑 PERFORMANCE DA IA PERSISTENTE</h3></div>', unsafe_allow_html=True)
-c1, c2, c3 = st.columns(3)
-with c1: st.metric("✅ ACERTOS", st.session_state.acertos)
-with c2: st.metric("❌ ERROS", st.session_state.erros)
-with col3: st.metric("📊 ASSERTIVIDADE", f"{assertividade:.1f}%")
-
-# TOP PADRÕES
-st.markdown('<div class="main-card"><h3>🏆 TOP 5 PADRÕES DO MERCADO</h3></div>', unsafe_allow_html=True)
-memoria_mapeada = analisar_padroes()
-ranking = []
-
-for pad, dados in memoria_mapeada.items():
-    if dados["total"] >= 5:
-        taxa = (dados["roxa"] / dados["total"]) * 100
-        ranking.append({"padrao": pad, "taxa": taxa, "total": dados["total"]})
-ranking = sorted(ranking, key=lambda x: x["taxa"], reverse=True)[:5]
-
-if ranking:
-    for item in ranking:
-        st.markdown(f'<div class="main-card">💎 <b>{item["padrao"]}</b><br>Taxa: <b>{item["taxa"]:.1f}%</b> | Ocorrências: <b>{item["total"]}</b></div>', unsafe_allow_html=True)
-else:
-    st.markdown("<p style='color:#888; text-align:center;'>Aguardando alimentação de dados estatísticos...</p>", unsafe_allow_html=True)
-
-# ÚLTIMAS VELAS OPERADAS
-if len(st.session_state.historico) > 0:
-    velas_texto = " → ".join([f"[{v}]" for v in st.session_state.historico[-15:]])
-    st.markdown(f"<p style='color:#999;'><b>Últimas velas (Total na Base Viva: {len(st.session_state.historico)}):</b><br>{velas_texto}</p>", unsafe_allow_html=True)
-
-# BOTÃO RESET GERAL
-if st.button("REINICIAR SISTEMA"):
-    if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
-    st.session_state.historico = []
-    st.session_state.banco_padroes = []
-    st.session_state.distancia_rosa = 0
-    st.session_state.acertos = 0
-    st.session_state.erros = 0
-    st.session_state.ultimos_resultados = []
-    st.session_state.bloqueados = {}
-    st.session_state.ultima_entrada = None
-    st.session_state.padr_disparado = None
-    salvar_memoria()
-    st.rerun()
