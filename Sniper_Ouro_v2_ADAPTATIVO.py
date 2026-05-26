@@ -1,18 +1,24 @@
 import streamlit as st
 from datetime import datetime
+import pickle
 import os
 
 # =========================================================
 # CONFIGURAÇÃO DA PÁGINA
 # =========================================================
 st.set_page_config(
-    page_title="Sniper Ouro v2 Adaptativo",
+    page_title="Sniper Ouro v3 Persistente",
     page_icon="🎯",
     layout="centered"
 )
 
 # =========================================================
-# LOGIN RESTRITO MASTER
+# ARQUIVO DE MEMÓRIA COMPACTADA (PICKLE)
+# =========================================================
+ARQUIVO_MEMORIA = "memoria_sniper.pkl"
+
+# =========================================================
+# LOGIN MASTER
 # =========================================================
 SENHA_CORRETA = "AlexMestre2026"
 
@@ -20,7 +26,7 @@ if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    st.title("🔒 SNIPER OURO V2 ADAPTATIVO")
+    st.title("🔒 SNIPER OURO V3 PERSISTENTE")
     senha = st.text_input("Digite sua chave:", type="password")
     if st.button("ENTRAR"):
         if senha == SENHA_CORRETA:
@@ -31,7 +37,7 @@ if not st.session_state.autenticado:
     st.stop()
 
 # =========================================================
-# CSS PREMIUM
+# CSS
 # =========================================================
 st.markdown("""
 <style>
@@ -45,40 +51,51 @@ h1,h2,h3,p,label { color: white !important; }
 """, unsafe_allow_html=True)
 
 # =========================================================
-# GAVETA FIXA NO DISCO DA V2 (TOTALMENTE SEPARADA DA V1)
-# =========================================================
-ARQUIVO_TXT_V2 = "historico_v2_adaptativo.txt"
-
-def salvar_vela_no_disco_v2(valor):
-    with open(ARQUIVO_TXT_V2, "a") as f:
-        f.write(f"{valor}\n")
-
-def carregar_velas_do_disco_v2():
-    if not os.path.exists(ARQUIVO_TXT_V2): return []
-    velas = []
-    with open(ARQUIVO_TXT_V2, "r") as f:
-        for linha in f:
-            if linha.strip(): velas.append(float(linha.strip()))
-    return list(velas)
-
-# =========================================================
 # MEMÓRIA VIVA DA SESSÃO
 # =========================================================
-if "historico" not in st.session_state:
-    st.session_state.historico = carregar_velas_do_disco_v2()
-
+if "historico" not in st.session_state: st.session_state.historico = []
 if "banco_padroes" not in st.session_state: st.session_state.banco_padroes = []
 if "acertos" not in st.session_state: st.session_state.acertos = 0
 if "erros" not in st.session_state: st.session_state.erros = 0
 if "ultima_entrada" not in st.session_state: st.session_state.ultima_entrada = None
 if "distancia_rosa" not in st.session_state: st.session_state.distancia_rosa = 0
 
+# =========================================================
+# OPERAÇÕES DE PERSISTÊNCIA (PICKLE ENGINE)
+# =========================================================
+def salvar_memoria():
+    dados = {
+        "historico": st.session_state.historico,
+        "banco_padroes": st.session_state.banco_padroes,
+        "acertos": st.session_state.acertos,
+        "erros": st.session_state.erros,
+        "distancia_rosa": st.session_state.distancia_rosa
+    }
+    with open(ARQUIVO_MEMORIA, "wb") as f:
+        pickle.dump(dados, f)
+
+def carregar_memoria():
+    if os.path.exists(ARQUIVO_MEMORIA):
+        with open(ARQUIVO_MEMORIA, "rb") as f:
+            try:
+                dados = pickle.load(f)
+                st.session_state.historico = dados.get("historico", [])
+                st.session_state.banco_padroes = dados.get("banco_padroes", [])
+                st.session_state.acertos = dados.get("acertos", 0)
+                st.session_state.erros = dados.get("erros", 0)
+                st.session_state.distancia_rosa = dados.get("distancia_rosa", 0)
+            except: pass
+
+if "memoria_carregada" not in st.session_state:
+    carregar_memoria()
+    st.session_state.memoria_carregada = True
+
 # RELÓGIO
 agora = datetime.now()
 st.markdown(f"""
 <div class="blue-card">
 <h2 style="margin:0;">⏰ {agora.strftime("%H:%M:%S")}</h2>
-<p style="margin:0;">MOTOR ADAPTATIVO ONLINE</p>
+<p style="margin:0;">MOTOR PERSISTENTE ONLINE</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -97,40 +114,34 @@ def gerar_padrao(historico):
     if len(historico) < 5: return None
     return "-".join([classificar_vela(v) for v in historico[-5:]])
 
-def salvar_padrao_v2(padrao, resultado, peso=1):
+def salvar_padrao(padrao, resultado, peso=1):
     st.session_state.banco_padroes.append({
         "padrao": padrao,
         "resultado": resultado,
         "peso": peso
     })
 
-def recalcular_matriz_v2():
+def recalcular_matriz_v3_completa():
     st.session_state.banco_padroes = []
     total = len(st.session_state.historico)
     if total >= 6:
         aux = []
         for idx, valor in enumerate(st.session_state.historico):
             distancia = total - idx
-            
-            # MEMÓRIA ADAPTATIVA: Pesos 5, 3 e 1 baseados na proximidade
             if distancia <= 200: peso = 5
             elif distancia <= 1000: peso = 3
             else: peso = 1
             
             if len(aux) >= 5:
                 pad = gerar_padrao(aux)
-                if pad: salvar_padrao_v2(pad, valor, peso)
+                if pad: salvar_padrao(pad, valor, peso)
             aux.append(valor)
 
-# Inicializa a matriz de padrões caso o arquivo já possua dados
-if len(st.session_state.historico) > 0 and len(st.session_state.banco_padroes) == 0:
-    recalcular_matriz_v2()
-
 # =========================================================
-# IMPORTAÇÃO CSV (BLINDADA)
+# IMPORTAÇÃO CSV (BLINDADA CONTRA LOOP DE RE-RELOAD)
 # =========================================================
 st.subheader("📂 TREINAR INTELIGÊNCIA")
-arquivo = st.file_uploader("Envie CSV/TXT com 1 vela por linha", type=["csv", "txt"])
+arquivo = st.file_uploader("Envie CSV/TXT com 1 vela por linha", type=["csv", "txt"], key="uploader_v3_lab")
 
 if arquivo is not None and len(st.session_state.historico) == 0:
     linhas = arquivo.read().decode("utf-8").splitlines()
@@ -140,10 +151,17 @@ if arquivo is not None and len(st.session_state.historico) == 0:
             if not limpo: continue
             valor = float(limpo.replace(",", "."))
             st.session_state.historico.append(valor)
-            salvar_vela_no_disco_v2(valor)
         except: pass
-    recalcular_matriz_v2()
-    st.success(f"{len(st.session_state.historico)} velas carregadas com sucesso!")
+        
+    recalcular_matriz_v3_completa()
+    
+    # Atualiza a distância rosa baseada na última vela do arquivo
+    if st.session_state.historico:
+        if st.session_state.historico[-1] >= 10: st.session_state.distancia_rosa = 0
+        else: st.session_state.distancia_rosa = 1
+
+    salvar_memoria()
+    st.success(f"{len(st.session_state.historico)} velas carregadas e salvas no arquivo compactado!")
     st.rerun()
 
 def analisar_padroes():
@@ -187,7 +205,7 @@ def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
 
 def processar_sinal(historico):
     if len(historico) < 30:
-        return "ANALISANDO...", "red-card", "Sistema ainda coletando dados", "---", None
+        return "ANALISANDO...", "red-card", f"Sistema coletando dados ({len(historico)}/30)", "---", None
 
     memoria = analisar_padroes()
     padrao = gerar_padrao(historico)
@@ -201,14 +219,14 @@ def processar_sinal(historico):
             taxa_rosa = (dados["rosa"] / ocorrencias) * 100
 
     if ocorrencias < 5:
-        return "🚫 ZONA PROIBIDA", "red-card", f"Pouca recorrência ({ocorrencias})", "---", None
+        return "🚫 ZONA PROIBIDA", "red-card", f"Pouca recorrência ({ocorrencias}/5 MÍNIMAS)", "---", None
     if taxa_roxa < 70:
         return "🚫 SEM FORÇA", "red-card", f"Taxa baixa ({taxa_roxa:.1f}%)", "---", None
 
     score = calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias)
 
     if score < 12:
-        return "🚫 AGUARDAR", "red-card", f"Score insuficiente ({score})", "---", None
+        return "🚫 AGUARDAR", "red-card", f"Score insuficiente ({score}/12)", "---", None
 
     if score >= 20:
         return f"💎 ENTRADA EXTREMA ({padrao})", "green-card", f"ROXA {taxa_roxa:.1f}% | SCORE {score}", "99%", "ROXA"
@@ -217,14 +235,14 @@ def processar_sinal(historico):
     if taxa_rosa >= 25 and st.session_state.distancia_rosa >= 10:
         return f"🌸 BUSCAR ROSA ({padrao})", "green-card", f"ROSA {taxa_rosa:.1f}%", "94%", "ROSA"
 
-    return "AGUARDAR", "red-card", "Sem confluência", "---", None
+    return "AGUARDAR", "red-card", "Sem confluência contextual", "---", None
 
 # =========================================================
-# ENTRADA MANUAL REAL-TIME
+# ENTRADA MANUAL REAL-TIME (PROCESSAMENTO INVERTIDO INTEGRAL)
 # =========================================================
 vela = st.number_input("Digite a última vela", min_value=0.0, format="%.2f", step=0.01)
 
-if st.button("CALCULAR"):
+if st.button("CALCULAR Saída"):
     if st.session_state.ultima_entrada == "ROXA":
         if vela >= 2: st.session_state.acertos += 1
         else: st.session_state.erros += 1
@@ -232,19 +250,20 @@ if st.button("CALCULAR"):
         if vela >= 10: st.session_state.acertos += 1
         else: st.session_state.erros += 1
 
-    salvar_vela_no_disco_v2(vela)
-    st.session_state.historico.append(vela)
+    if len(st.session_state.historico) >= 5:
+        padrao_corrente = gerar_padrao(st.session_state.historico)
+        if padrao_corrente: salvar_padrao(padrao_corrente, vela, peso=3)
 
-    if len(st.session_state.historico) >= 6:
-        hist_previo = st.session_state.historico[:-1]
-        pad_man = gerar_padrao(hist_previo)
-        if pad_man: salvar_padrao_v2(pad_man, vela, peso=3)
+    st.session_state.historico.append(vela)
 
     if vela >= 10: st.session_state.distancia_rosa = 0
     else: st.session_state.distancia_rosa += 1
+
+    recalcular_matriz_v3_completa()
+    salvar_memoria()
     st.rerun()
 
-# CONTROLE DE FLUXO DE EXIBIÇÃO
+# EXECUÇÃO DA INTERFACE OPERACIONAL
 sinal, cor, status, confianca, entrada = processar_sinal(st.session_state.historico)
 st.session_state.ultima_entrada = entrada
 
@@ -269,38 +288,4 @@ st.markdown(f"""
 total = st.session_state.acertos + st.session_state.erros
 assertividade = (st.session_state.acertos / total) * 100 if total > 0 else 0
 
-st.markdown('<div class="gold-card"><h2>👑 PERFORMANCE</h2></div>', unsafe_allow_html=True)
-col1, col2, col3 = st.columns(3)
-with col1: st.metric("✅ ACERTOS", st.session_state.acertos)
-with col2: st.metric("❌ ERROS", st.session_state.erros)
-with col3: st.metric("📊 ASSERTIVIDADE", f"{assertividade:.1f}%")
-
-# TOP PADRÕES
-st.subheader("🏆 TOP PADRÕES")
-ranking = []
-memoria = analisar_padroes()
-
-for padrao_ch, dados in memoria.items():
-    if dados["total"] >= 5:
-        taxa = (dados["roxa"] / dados["total"]) * 100
-        ranking.append({"padrao": padrao_ch, "taxa": taxa, "total": dados["total"]})
-ranking = sorted(ranking, key=lambda x: x["taxa"], reverse=True)[:5]
-
-for item in ranking:
-    st.write(f"💎 {item['padrao']} → {item['taxa']:.1f}% ({item['total']} ocorrências)")
-
-# HISTÓRICO RECENTE
-if len(st.session_state.historico) > 0:
-    texto = " → ".join([f"[{v}]" for v in st.session_state.historico[-15:]])
-    st.markdown(f"<p style='color:#888;'><b>Últimas velas (Total em Base Adaptativa: {len(st.session_state.historico)}):</b> {texto}</p>", unsafe_allow_html=True)
-
-# RESET TOTAL EXCLUSIVO DA V2
-if st.button("REINICIAR SISTEMA"):
-    if os.path.exists(ARQUIVO_TXT_V2): os.remove(ARQUIVO_TXT_V2)
-    st.session_state.historico = []
-    st.session_state.banco_padroes = []
-    st.session_state.acertos = 0
-    st.session_state.erros = 0
-    st.session_state.ultima_entrada = None
-    st.session_state.distancia_rosa = 0
-    st.rerun()
+st.markdown('<div class="gold-card"><h2>👑
