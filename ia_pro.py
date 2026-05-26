@@ -32,7 +32,7 @@ if not st.session_state.autenticado:
     st.stop()
 
 # =========================================================
-# CSS PREMIUM RE-ESTILIZADO (FIXO E ESTÁVEL)
+# CSS PREMIUM RE-ESTILIZADO (PAINEL SEGURO)
 # =========================================================
 st.markdown("""
 <style>
@@ -235,9 +235,9 @@ def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
     return score
 
 # =========================================================
-# PROCESSAMENTO CENTRAL EXTREMO
+# PROCESSAMENTO CENTRAL EXTREMO (SISTEMA INTEGRAL CORRIGIDO)
 # =========================================================
-def processar_sinal(historico):
+def processar_sinal_v3(historico):
     if len(historico) < 20:
         return "ANALISANDO...", "red-card", f"ALIMENTE MAIS O SISTEMA ({len(historico)}/20 VELAS)", "---", None
 
@@ -252,6 +252,7 @@ def processar_sinal(historico):
             taxa_roxa = (dados["roxa"] / ocorrencias) * 100
             taxa_rosa = (dados["rosa"] / ocorrencias) * 100
 
+    # --- ARVORE DE DECISÃO EM SEGUNDO PLANO (NÃO INTERROMPE A TELA) ---
     if ocorrencias < 3:  
         return "🚫 ZONA PROIBIDA", "red-card", f"PADRÃO ISOLADO ({padrao if padrao else '---'}) | OCORRÊNCIAS EM BASE: {ocorrencias}/3 MÍNIMAS", "---", None
 
@@ -268,52 +269,4 @@ def processar_sinal(historico):
     if score >= 10:
         return f"⚡ ENTRADA SNIPER ({padrao})", "main-card", f"PADRÃO PREMIUM CONFLUENTE | ROXA {taxa_roxa:.1f}% | SCORE {score}", "92%", "ROXA"
     if taxa_rosa >= 25 and st.session_state.distancia_rosa >= 10:
-        return f"🌸 BUSCAR ROSA ({padrao})", "green-card", f"ZONA ALTA MATURADA | CHANCE ROSA {taxa_rosa:.1f}%", "94%", "ROSA"
-    
-    return "AGUARDAR ✋", "red-card", f"AGUARDANDO REFORÇO DE FLUXO CONTEXTUAL (SCORE ATUAL: {score})", "---", None
-
-# =========================================================
-# ENTRADA MANUAL REAL-TIME
-# =========================================================
-st.markdown("<br>", unsafe_allow_html=True)
-banca = st.number_input("Banca Inicial (R$):", min_value=0.0, value=20.0, step=1.0)
-vela = st.number_input("Digite a última vela:", min_value=0.0, format="%.2f", step=0.01)
-
-# REMOVIDO ST.RERUN() DO BOTÃO PARA EVITAR PISCAR DA TELA E MANTER O HISTÓRICO VIVO
-if st.button("CALCULAR PROBABILIDADE"):
-    if st.session_state.ultima_entrada in ["ROXA", "ROSA"]:
-        if st.session_state.ultima_entrada == "ROXA":
-            if vela >= 2.0: st.session_state.acertos += 1
-            else: st.session_state.erros += 1
-        elif st.session_state.ultima_entrada == "ROSA":
-            if vela >= 10.0: st.session_state.acertos += 1
-            else: st.session_state.erros += 1
-
-    salvar_vela_no_disco(vela)
-    st.session_state.historico = carregar_banco_do_disco()
-    treinar_matriz_completa()
-
-    if vela >= 10.0: st.session_state.distancia_rosa = 0
-    else: st.session_state.distancia_rosa += 1
-
-# EXECUÇÃO DO MOTOR PREDITIVO
-sinal, col_card, status, confianca, entrada_gerada = processar_sinal(st.session_state.historico)
-st.session_state.ultima_entrada = entrada_gerada
-
-# =========================================================
-# PAINEL PRINCIPAL DE EXIBIÇÃO
-# =========================================================
-st.markdown(f"""
-<div class="{col_card}">
-<h1 style='margin:0; color: {'#00ff00' if 'ENTRADA' in sinal or 'BUSCAR' in sinal else '#ef4444'} !important;'>{sinal}</h1>
-<p style="margin:5px 0 0 0;"><b>CONFIANÇA:</b> {confianca}<br><b>DIRETRIZ:</b> {status}</p>
-</div>
-""", unsafe_allow_html=True)
-
-# EXIBIÇÃO RADAR ROSA
-st.markdown(f"""
-<div class="main-card">
-<h3>🌸 RADAR ROSA</h3>
-<p style="margin:5px 0 0 0;">Distância atual: <b>{st.session_state.distancia_rosa}</b> rodadas sem estourar alvos altos</p>
-</div>
-""", unsafe_allow_html=True)
+        return f"🌸 BUSCAR ROSA ({padrao})
