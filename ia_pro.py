@@ -50,7 +50,7 @@ h1,h2,h3,p,label { color: white !important; }
 """, unsafe_allow_html=True)
 
 # =========================================================
-# BANCO DE DADOS LOCAL E ARMAZENAMENTO EM CACHE
+# BANCO DE DADOS LOCAL E CONTROLE DE CACHE RÁPIDO
 # =========================================================
 ARQUIVO_BANCO = "memoria_extrema.txt"
 
@@ -153,10 +153,11 @@ st.session_state.historico = obter_velas_vivas()
 st.session_state.banco_padroes = treinar_matriz_cached(st.session_state.historico)
 
 # =========================================================
-# 📂 REPOSITÓRIO DE CARGA CSV
+# 📂 REPOSITÓRIO DE CARGA CSV (BLINDADO CONTRA RE-LOOPS)
 # =========================================================
 st.markdown('<div class="main-card">### 📂 TREINAR INTELIGÊNCIA EXTREMA</div>', unsafe_allow_html=True)
-arquivo = st.file_uploader("Suba um novo histórico CSV:", type=["csv", "txt"])
+# Adicionado key fixa para blindar o componente contra re-leitura silenciosa do Streamlit
+arquivo = st.file_uploader("Suba um novo histórico CSV:", type=["csv", "txt"], key="leitor_csv_master")
 
 if arquivo is not None:
     linhas = arquivo.read().decode("utf-8").splitlines()
@@ -176,6 +177,7 @@ if arquivo is not None:
         st.cache_data.clear()
         st.session_state.historico = obter_velas_vivas()
         st.session_state.banco_padroes = treinar_matriz_cached(st.session_state.historico)
+        st.success(f"🔥 Banco permanente alimentado com +{contador_carga} velas!")
         st.rerun()
 
 def analisar_padroes():
@@ -216,7 +218,7 @@ def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
     return score
 
 # =========================================================
-# PAINEL DE ENTRADA MANUAL
+# PAINEL DE ENTRADA MANUAL (ORDEM E POSIÇÃO ORIGINAL)
 # =========================================================
 st.markdown("<br>", unsafe_allow_html=True)
 banca = st.number_input("Banca Inicial (R$):", min_value=0.0, value=20.0, step=1.0)
@@ -295,7 +297,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# RADAR ROSA
+# RADAR ROSA RETORNADO PARA A POSIÇÃO ORIGINAL
 st.markdown(f"""
 <div class="main-card">
 <h3>🌸 RADAR ROSA</h3>
@@ -331,10 +333,10 @@ else:
     st.markdown("<p style='color:#888; text-align:center; margin:0;'>Aguardando amostragem estável de mercado (Mínimo: 3 ocorrências).</p>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# LINHA DO TEMPO RECENTE
+# LINHA DO TEMPO RECENTE NO RODAPÉ
 if len(st.session_state.historico) > 0:
     velas_texto = " → ".join([f"[{v}]" for v in st.session_state.historico[-15:]])
-    st.markdown(f"<p style='color:#888; margin-top:15px;'><b>Últimas velas (Total em Banco Fixo: {len(st.session_state.historico)}):</b> {velas_texto}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color:#888; margin-top:15px;'><b>Últimas velas (Total Geral em Banco Fixo: {len(st.session_state.historico)}):</b> {velas_texto}</p>", unsafe_allow_html=True)
 
 # BOTÕES DE CONTROLE
 st.markdown("<br>", unsafe_allow_html=True)
@@ -353,5 +355,5 @@ if st.button("DELETAR TODO BANCO PERMANENTE"):
     st.session_state.acertos = 0
     st.session_state.erros = 0
     st.session_state.ultima_entrada = None
-    st.success("Banco destruído com sucesso.")
+    st.success("Banco destruído com sucesso. O app reiniciará limpo.")
     st.rerun()
