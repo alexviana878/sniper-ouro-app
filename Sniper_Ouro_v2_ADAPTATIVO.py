@@ -13,12 +13,12 @@ st.set_page_config(
 )
 
 # =========================================================
-# ARQUIVO DE MEMÓRIA COMPACTADA (PICKLE)
+# ARQUIVO DE MEMÓRIA PERSISTENTE
 # =========================================================
 ARQUIVO_MEMORIA = "memoria_sniper.pkl"
 
 # =========================================================
-# LOGIN MASTER
+# LOGIN RESTRITO
 # =========================================================
 SENHA_CORRETA = "AlexMestre2026"
 
@@ -37,7 +37,7 @@ if not st.session_state.autenticado:
     st.stop()
 
 # =========================================================
-# CSS
+# CSS PREMIUM
 # =========================================================
 st.markdown("""
 <style>
@@ -51,7 +51,7 @@ h1,h2,h3,p,label { color: white !important; }
 """, unsafe_allow_html=True)
 
 # =========================================================
-# MEMÓRIA VIVA DA SESSÃO
+# OPERAÇÕES DE PERSISTÊNCIA (PICKLE ENGINE)
 # =========================================================
 if "historico" not in st.session_state: st.session_state.historico = []
 if "banco_padroes" not in st.session_state: st.session_state.banco_padroes = []
@@ -60,9 +60,6 @@ if "erros" not in st.session_state: st.session_state.erros = 0
 if "ultima_entrada" not in st.session_state: st.session_state.ultima_entrada = None
 if "distancia_rosa" not in st.session_state: st.session_state.distancia_rosa = 0
 
-# =========================================================
-# OPERAÇÕES DE PERSISTÊNCIA (PICKLE ENGINE)
-# =========================================================
 def salvar_memoria():
     dados = {
         "historico": st.session_state.historico,
@@ -101,7 +98,7 @@ st.markdown(f"""
 
 st.title("🎯 SNIPER OURO V2 ADAPTATIVO")
 
-# CLASSIFICAÇÃO
+# CLASSIFICAÇÃO E PADRÕES
 def classificar_vela(valor):
     if valor < 1.20: return "X"
     elif valor < 2.00: return "B"
@@ -121,48 +118,43 @@ def salvar_padrao(padrao, resultado, peso=1):
         "peso": peso
     })
 
-def recalcular_matriz_v3_completa():
-    st.session_state.banco_padroes = []
-    total = len(st.session_state.historico)
-    if total >= 6:
-        aux = []
-        for idx, valor in enumerate(st.session_state.historico):
-            distancia = total - idx
-            if distancia <= 200: peso = 5
-            elif distancia <= 1000: peso = 3
-            else: peso = 1
-            
-            if len(aux) >= 5:
-                pad = gerar_padrao(aux)
-                if pad: salvar_padrao(pad, valor, peso)
-            aux.append(valor)
-
 # =========================================================
-# IMPORTAÇÃO CSV (BLINDADA CONTRA LOOP DE RE-RELOAD)
+# IMPORTAÇÃO CSV (BLINDADA)
 # =========================================================
 st.subheader("📂 TREINAR INTELIGÊNCIA")
-arquivo = st.file_uploader("Envie CSV/TXT com 1 vela por linha", type=["csv", "txt"], key="uploader_v3_lab")
+arquivo = st.file_uploader("Envie CSV/TXT com 1 vela por linha", type=["csv", "txt"], key="uploader_v2_persistente")
 
 if arquivo is not None and len(st.session_state.historico) == 0:
     linhas = arquivo.read().decode("utf-8").splitlines()
+    velas = []
     for linha in linhas:
         try:
             limpo = linha.strip()
             if not limpo: continue
-            valor = float(limpo.replace(",", "."))
-            st.session_state.historico.append(valor)
+            velas.append(float(limpo.replace(",", ".")))
         except: pass
-        
-    recalcular_matriz_v3_completa()
-    
-    # Atualiza a distância rosa baseada na última vela do arquivo
-    if st.session_state.historico:
-        if st.session_state.historico[-1] >= 10: st.session_state.distancia_rosa = 0
-        else: st.session_state.distancia_rosa = 1
 
-    salvar_memoria()
-    st.success(f"{len(st.session_state.historico)} velas carregadas e salvas no arquivo compactado!")
-    st.rerun()
+    total = len(velas)
+    if total > 0:
+        for idx, valor in enumerate(velas):
+            distancia = total - idx
+            
+            if distancia <= 200: peso = 5
+            elif distancia <= 1000: peso = 3
+            else: peso = 1
+
+            if len(st.session_state.historico) >= 5:
+                padrao_existente = gerar_padrao(st.session_state.historico)
+                if padrao_existente:
+                    salvar_padrao(padrao_existente, valor, peso)
+
+            st.session_state.historico.append(valor)
+            if valor >= 10: st.session_state.distancia_rosa = 0
+            else: st.session_state.distancia_rosa += 1
+
+        salvar_memoria()
+        st.success(f"{total} velas carregadas e salvas com sucesso")
+        st.rerun()
 
 def analisar_padroes():
     memoria = {}
@@ -226,66 +218,3 @@ def processar_sinal(historico):
     score = calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias)
 
     if score < 12:
-        return "🚫 AGUARDAR", "red-card", f"Score insuficiente ({score}/12)", "---", None
-
-    if score >= 20:
-        return f"💎 ENTRADA EXTREMA ({padrao})", "green-card", f"ROXA {taxa_roxa:.1f}% | SCORE {score}", "99%", "ROXA"
-    if score >= 14:
-        return f"⚡ ENTRADA SNIPER ({padrao})", "blue-card", f"ROXA {taxa_roxa:.1f}% | SCORE {score}", "92%", "ROXA"
-    if taxa_rosa >= 25 and st.session_state.distancia_rosa >= 10:
-        return f"🌸 BUSCAR ROSA ({padrao})", "green-card", f"ROSA {taxa_rosa:.1f}%", "94%", "ROSA"
-
-    return "AGUARDAR", "red-card", "Sem confluência contextual", "---", None
-
-# =========================================================
-# ENTRADA MANUAL REAL-TIME (PROCESSAMENTO INVERTIDO INTEGRAL)
-# =========================================================
-vela = st.number_input("Digite a última vela", min_value=0.0, format="%.2f", step=0.01)
-
-if st.button("CALCULAR Saída"):
-    if st.session_state.ultima_entrada == "ROXA":
-        if vela >= 2: st.session_state.acertos += 1
-        else: st.session_state.erros += 1
-    elif st.session_state.ultima_entrada == "ROSA":
-        if vela >= 10: st.session_state.acertos += 1
-        else: st.session_state.erros += 1
-
-    if len(st.session_state.historico) >= 5:
-        padrao_corrente = gerar_padrao(st.session_state.historico)
-        if padrao_corrente: salvar_padrao(padrao_corrente, vela, peso=3)
-
-    st.session_state.historico.append(vela)
-
-    if vela >= 10: st.session_state.distancia_rosa = 0
-    else: st.session_state.distancia_rosa += 1
-
-    recalcular_matriz_v3_completa()
-    salvar_memoria()
-    st.rerun()
-
-# EXECUÇÃO DA INTERFACE OPERACIONAL
-sinal, cor, status, confianca, entrada = processar_sinal(st.session_state.historico)
-st.session_state.ultima_entrada = entrada
-
-# PAINEL PRINCIPAL
-st.markdown(f"""
-<div class="{cor}">
-<h1>{sinal}</h1>
-<p><b>STATUS:</b> {status}</p>
-<p><b>CONFIANÇA:</b> {confianca}</p>
-</div>
-""", unsafe_allow_html=True)
-
-# RADAR ROSA
-st.markdown(f"""
-<div class="blue-card">
-<h3>🌸 RADAR ROSA</h3>
-<p>{st.session_state.distancia_rosa} rodadas sem rosa</p>
-</div>
-""", unsafe_allow_html=True)
-
-# PERFORMANCE
-total = st.session_state.acertos + st.session_state.erros
-assertividade = (st.session_state.acertos / total) * 100 if total > 0 else 0
-
-st.markdown('<div class="gold-card"><h2>👑
