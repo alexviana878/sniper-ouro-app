@@ -310,4 +310,23 @@ if ranking:
 else:
     st.markdown("<p style='color:#888; text-align:center;'>Aguardando alimentação de dados estatísticos...</p>", unsafe_allow_html=True)
 
-# ÚLTIMAS VELAS OPER
+# ÚLTIMAS VELAS OPERADAS
+velas_texto = " → ".join([f"[{v}]" for v in st.session_state.historico[-15:]]) if len(st.session_state.historico) > 0 else "Nenhuma vela registrada"
+st.markdown(f"""
+<p style="color:#999;"><b>Últimas velas (Total na Base Viva: {len(st.session_state.historico)}):</b><br>{velas_texto}</p>
+""", unsafe_allow_html=True)
+
+# BOTÃO RESET GERAL
+if st.button("REINICIAR SISTEMA"):
+    if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
+    st.session_state.historico = []
+    st.session_state.banco_padroes = []
+    st.session_state.distancia_rosa = 0
+    st.session_state.acertos = 0
+    st.session_state.erros = 0
+    st.session_state.ultimos_resultados = []
+    st.session_state.bloqueados = {}
+    st.session_state.ultima_entrada = None
+    st.session_state.padr_disparado = None
+    salvar_memoria()
+    st.rerun()
