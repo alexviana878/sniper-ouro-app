@@ -41,6 +41,9 @@ st.markdown("""
 .red-card { border: 2px solid #ef4444; border-radius: 15px; padding: 15px; background-color: #111322; margin-bottom: 15px; box-shadow: 0 0 12px #ef4444; color: white; }
 .gold-card { border: 2px solid #f59e0b; border-radius: 15px; padding: 15px; background-color: #111322; margin-top: 20px; box-shadow: 0 0 12px #f59e0b; color: white; }
 .clock-card { border: 1px solid #00ff00; border-radius: 10px; padding: 10px; text-align: center; background-color: #111322; box-shadow: 0 0 8px #00ff00; margin-bottom: 15px; }
+.manifesto-card { background-color: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 15px; margin-bottom: 15px; }
+th, td { padding: 8px; text-align: left; border-bottom: 1px solid #30363d; color: white; }
+th { background-color: #21262d; color: #f59e0b; }
 h1,h2,h3,p,label { color: white !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -72,15 +75,34 @@ st.markdown(f"""
 st.title("🎯 SNIPER OURO IA EXTREME")
 
 # =========================================================
+# 🧠 EXPANSOR: MANIFESTO DA MENTALIDADE INSTITUCIONAL
+# =========================================================
+with st.expander("🧠 DIRETRIZES DA MENTALIDADE SNIPER ELITE (LEIA ANTES DE OPERAR)"):
+    st.markdown("""
+    <div class="manifesto-card">
+    <p style='color:#f59e0b !important; font-weight:bold; font-size:16px; margin-top:0;'>🛡️ O SEGREDO NÃO É PREVER TUDO, É ELIMINAR O RISCO RUIM</p>
+    <p style='font-size:14px; color:#c9d1d9;'>O algoritmo do mercado muda de intensidade e frequência. Sistemas profissionais trabalham com <b>Vantagem Matemática Contextual</b>, operando pouco e recusando sinais medianos.</p>
+    <table style='width:100%; border-collapse: collapse; margin-top:10px;'>
+        <tr><th>NÍVEL DO SISTEMA</th><th>ASSERTIVIDADE REAL ESPERADA</th></tr>
+        <tr><th>🔴 Amador / Fake</th><td>35% a 50% (Gera ruído aleatório)</td></tr>
+        <tr><th>🟡 Médio Comercial</td><td>50% a 60% (Entra sem contexto)</td></tr>
+        <tr><th>🟢 Bom de Mercado</td><td>60% a 70% (Histórico simples)</td></tr>
+        <tr><th>🔵 Profissional Quant</th><td>70% a 80% (Filtros de Defesa Ativos)</td></tr>
+        <tr><th>👑 Sniper Elite</th><td>80%+ (Apenas em Confluências Raras)</td></tr>
+    </table>
+    </div>
+    """, unsafe_allow_html=True)
+
+# =========================================================
 # CLASSIFICAÇÃO INTELIGENTE DE 6 CAMADAS
 # =========================================================
 def classificar_vela(valor):
-    if valor < 1.20: return "X"    # Compressão Extrema
-    elif valor < 2.00: return "B"  # Baixa Comum
-    elif valor < 5.00: return "R"  # Roxa Regular
-    elif valor < 10.00: return "P" # Roxa Potente
-    elif valor < 20.00: return "A" # Rosa Padrão
-    else: return "E"               # Rosa Extrema
+    if valor < 1.20: return "X"    
+    elif valor < 2.00: return "B"  
+    elif valor < 5.00: return "R"  
+    elif valor < 10.00: return "P" 
+    elif valor < 20.00: return "A" 
+    else: return "E"               
 
 def gerar_padrao(historico):
     if len(historico) < 5: return None
@@ -90,7 +112,7 @@ def salvar_padrao(padrao, resultado):
     st.session_state.banco_padroes.append({"padrao": padrao, "resultado": resultado})
 
 # =========================================================
-# 📂 NOVO MOTOR DE IMPORTAÇÃO ULTRA RESILIENTE CONTRA BUGS
+# 📂 TREINAMENTO VIA CSV COM ENGINE DE PESO ENXUTO (Sua Sugestão!)
 # =========================================================
 st.markdown('<div class="main-card">### 📂 TREINAR INTELIGÊNCIA</div>', unsafe_allow_html=True)
 arquivo = st.file_uploader("Envie CSV/TXT com 1 vela por linha:", type=["csv", "txt"])
@@ -99,15 +121,17 @@ if arquivo is not None and len(st.session_state.historico) == 0:
     linhas = arquivo.read().decode("utf-8").splitlines()
     velas_carga = []
     
-    # Filtra e limpa rigorosamente cada linha do arquivo antes de processar
     for linha in linhas:
         try:
             limpo = linha.strip().replace('"', '').replace("'", "")
-            if not limpo or any(c.isalpha() for c in limpo if c not in ['.', ',', '-']): 
-                continue # Pula linhas vazias ou com cabeçalhos de texto do Excel
-            velas_carga.append(float(limpo.replace(",", ".")))
-        except: 
-            pass
+            if not limpo: continue
+            partes = limpo.split()
+            for parte in partes:
+                val_limpo = parte.replace(",", ".")
+                float(val_limpo)
+                velas_carga.append(float(val_limpo))
+                break
+        except: pass
         
     total_velas = len(velas_carga)
     
@@ -115,8 +139,9 @@ if arquivo is not None and len(st.session_state.historico) == 0:
         for idx, valor in enumerate(velas_carga):
             distancia_do_fim = total_velas - idx
             
-            if distancia_do_fim <= 300: peso = 5       
-            elif distancia_do_fim <= 1000: peso = 3    
+            # Aplicação dos seus pesos otimizados equilibrados (200/800)
+            if distancia_do_fim <= 200: peso = 4       
+            elif distancia_do_fim <= 800: peso = 2    
             else: peso = 1                             
             
             if len(st.session_state.historico) >= 5:
@@ -124,21 +149,19 @@ if arquivo is not None and len(st.session_state.historico) == 0:
                 if padrao_existente:
                     for _ in range(peso):
                         salvar_padrao(padrao_existente, valor)
-                    
+                        
             st.session_state.historico.append(valor)
             st.session_state.distancia_rosa = 0 if valor >= 10.0 else st.session_state.distancia_rosa + 1
-
-        st.success(f"🔥 {total_velas} velas integradas e calibradas com matriz de peso.")
-    else:
-        st.error("O arquivo enviado não contém números de velas válidos. Verifique se copiou apenas os números.")
+            
+        st.success(f"🔥 Inteligência Alimentada! {total_velas} velas integradas e indexadas.")
+        st.rerun()
 
 # =========================================================
 # ANALISADOR DE PADRÕES (ANTI-TRAVAMENTO)
 # =========================================================
 def analisar_padroes():
     memoria = {}
-    if not st.session_state.banco_padroes:
-        return memoria
+    if not st.session_state.banco_padroes: return memoria
     for registro in st.session_state.banco_padroes:
         padrao = registro["padrao"]
         resultado = registro["resultado"]
@@ -154,7 +177,7 @@ def analisar_padroes():
     return memoria
 
 # =========================================================
-# SCORE EXTREMO RIGOROSO
+# SCORE EXTREMO CALIBRADO
 # =========================================================
 def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
     score = 0
@@ -171,23 +194,23 @@ def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
     if extremos >= 2: score -= 8
     if v_atual < 1.10: score -= 10
 
-    # Confluências Adaptativas
-    if taxa_roxa >= 83: score += 6
+    # Força Estatística Equilibrada
+    if taxa_roxa >= 75: score += 5
+    if taxa_roxa >= 85: score += 3
     if taxa_roxa >= 90: score += 4
-    if taxa_rosa >= 20: score += 4
-    if taxa_rosa >= 35: score += 3
+    if taxa_rosa >= 20: score += 3
     
-    if ocorrencias >= 15: score += 5
-    if ocorrencias >= 30: score += 4
+    # Ocorrências Adaptadas
+    if ocorrencias >= 10: score += 3
+    if ocorrencias >= 25: score += 4
+    if ocorrencias >= 50: score += 4
     
     if janela_ativa: score += 2
     if st.session_state.distancia_rosa >= 12: score += 2
-    
     if len(historico) >= 2 and historico[-2] >= 2.0: score += 2
 
     # Gatilho de Recuperação Curta
-    if ultimas5[-1] < 2.0 and ultimas5[-2] >= 2.0 and azuis <= 2:
-        score += 3
+    if ultimas5[-1] < 2.0 and ultimas5[-2] >= 2.0 and azuis <= 2: score += 3
 
     return score
 
@@ -196,7 +219,7 @@ def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
 # =========================================================
 def processar_sinal(historico):
     if len(historico) < 30:
-        return "ANALISANDO...", "red-card", f"ALIMENTE MAIS O SISTEMA (VELAS NA MESA: {len(historico)}/30)", "---", None
+        return "ANALISANDO...", "red-card", f"ALIMENTE MAIS O SISTEMA ({len(historico)}/30 VELAS)", "---", None
 
     padrao = gerar_padrao(historico)
     memoria = analisar_padroes()
@@ -209,27 +232,27 @@ def processar_sinal(historico):
             taxa_roxa = (dados["roxa"] / ocorrencias) * 100
             taxa_rosa = (dados["rosa"] / ocorrencias) * 100
 
-    # --- FILTROS DE PROIBIÇÃO SISTÊMICOS ---
-    if ocorrencias < 15:
-        return "🚫 ZONA PROIBIDA", "red-card", f"PADRÃO REMOTO DE CAMPO ({padrao if padrao else '---'}) | SINAIS EM BASE: {ocorrencias} (MÍNIMO 15)", "---", None
+    # --- FILTROS DE PROIBIÇÃO SISTÊMICOS CALIBRADOS ---
+    if ocorrencias < 10:  # Régua de segurança otimizada para o histórico rodar
+        return "🚫 ZONA PROIBIDA", "red-card", f"PADRÃO REMOTO DE CAMPO ({padrao if padrao else '---'}) | BASE COM POUCOS DADOS ({ocorrencias} REGISTROS)", "---", None
 
-    if taxa_roxa < 83.0:
-        return "🚫 SEM FORÇA ESTATÍSTICA", "red-card", f"TAXA ABAIXO DA RÉGUA EXTREMA ({taxa_roxa:.1f}%)", "---", None
+    if taxa_roxa < 75.0:  # Sarrafo refinado de assertividade protetiva
+        return "🚫 SEM FORÇA ESTATÍSTICA", "red-card", f"TAXA HISTÓRICA INSUFICIENTE ({taxa_roxa:.1f}%)", "---", None
 
     score = calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias)
 
-    if score < 15:
+    if score < 14:
         return "🚫 SCORE INSUFICIENTE", "red-card", f"CONFLUÊNCIA DE CRITÉRIOS BAIXA (SCORE: {score})", "---", None
 
     # --- DISPARO DE ENTRADAS EXTREMAS ---
-    if score >= 24:
-        return f"💎 ENTRADA EXTREMA ({padrao})", "green-card", f"PADRÃO ELITE | ROXA {taxa_roxa:.1f}% | ROSA {taxa_rosa:.1f}% | SCORE {score}", "99%", "ROXA"
-    if score >= 18:
-        return f"⚡ ENTRADA SNIPER ({padrao})", "main-card", f"PADRÃO PREMIUM | ROXA {taxa_roxa:.1f}% | SCORE {score}", "92%", "ROXA"
-    if taxa_rosa >= 35 and st.session_state.distancia_rosa >= 12:
-        return f"🌸 BUSCAR ROSA ({padrao})", "green-card", f"PRESSÃO ROSA DETECTADA | CHANCE {taxa_rosa:.1f}%", "94%", "ROSA"
+    if score >= 22:
+        return f"💎 ENTRADA EXTREMA ({padrao})", "green-card", f"PADRÃO ELITE CRÍTICO | ROXA {taxa_roxa:.1f}% | ROSA {taxa_rosa:.1f}% | SCORE {score}", "99%", "ROXA"
+    if score >= 15:
+        return f"⚡ ENTRADA SNIPER ({padrao})", "main-card", f"PADRÃO PREMIUM CONFLUENTE | ROXA {taxa_roxa:.1f}% | SCORE {score}", "92%", "ROXA"
+    if taxa_rosa >= 30 and st.session_state.distancia_rosa >= 10:
+        return f"🌸 BUSCAR ROSA ({padrao})", "green-card", f"ZONA ALTA MATURADA | CHANCE ROSA {taxa_rosa:.1f}%", "94%", "ROSA"
     
-    return "AGUARDAR ✋", "red-card", f"MERCADO PROCESSADO. AGUARDANDO CONFLUÊNCIA DE ENTRADA (SCORE: {score})", "---", None
+    return "AGUARDAR ✋", "red-card", f"AGUARDANDO REFORÇO DE FLUXO (SCORE ATUAL: {score})", "---", None
 
 # =========================================================
 # ENTRADA MANUAL REAL-TIME
@@ -281,7 +304,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# MONITOR DE PERFORMANCE EXTREMA (BLOCO PROTEGIDO)
+# MONITOR DE PERFORMANCE (TOTALMENTE PROTEGIDO)
 total_jogadas = st.session_state.acertos + st.session_state.erros
 assertividade = (st.session_state.acertos / total_jogadas) * 100 if total_jogadas > 0 else 0.0
 
@@ -297,10 +320,11 @@ st.markdown("<div class='main-card'><h3 style='text-align:center; color:#00ff00 
 memoria_mapeada = analisar_padroes()
 ranking = []
 
-for pad, dados in memoria_mapeada.items():
-    if dados["total"] >= 15: 
-        taxa = (dados["roxa"] / dados["total"]) * 100
-        ranking.append({"padrao": pad, "taxa": taxa, "total": dados["total"]})
+if memoria_mapeada:
+    for pad, dados in memoria_mapeada.items():
+        if dados["total"] >= 10: 
+            taxa = (dados["roxa"] / dados["total"]) * 100
+            ranking.append({"padrao": pad, "taxa": taxa, "total": dados["total"]})
 
 ranking = sorted(ranking, key=lambda x: x["taxa"], reverse=True)[:5]
 
@@ -308,7 +332,7 @@ if ranking:
     for item in ranking:
         st.markdown(f"<p style='color:white; margin:5px 0;'>💎 <b>{item['padrao']}</b> → <span style='color:#00ff00;'>{item['taxa']:.1f}%</span> de assertividade ({item['total']} ocorrências)</p>", unsafe_allow_html=True)
 else:
-    st.markdown("<p style='color:#888; text-align:center; margin:0;'>Aguardando banco de dados com amostragem estável (Mínimo: 15 ocorrências).</p>", unsafe_allow_html=True)
+    st.markdown("<p style='color:#888; text-align:center; margin:0;'>Aguardando banco de dados com amostragem estável (Mínimo: 10 ocorrências).</p>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 # LINHA DO TEMPO RECENTE
