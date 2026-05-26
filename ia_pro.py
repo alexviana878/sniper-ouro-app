@@ -50,7 +50,7 @@ h1,h2,h3,p,label { color: white !important; }
 """, unsafe_allow_html=True)
 
 # =========================================================
-# BANCO DE DADOS LOCAL E MECANISMO DE CACHE DE ALTA VELOCIDADE
+# BANCO DE DADOS LOCAL E ARMAZENAMENTO EM CACHE
 # =========================================================
 ARQUIVO_BANCO = "memoria_extrema.txt"
 
@@ -71,7 +71,7 @@ def carregar_banco_do_disco_cached(mod_time):
     return velas
 
 def obter_velas_vivas():
-    mtime = os.path.getmtime(ARQUIVO_BANCO) if os.path.exists(ARQUIVO_BANCO) else 0
+    mtime = os.path.getmtime(ARQUORD_BANCO) if os.path.exists(ARQUIVO_BANCO) else 0
     return carregar_banco_do_disco_cached(mtime)
 
 # =========================================================
@@ -86,9 +86,7 @@ if "acertos" not in st.session_state: st.session_state.acertos = 0
 if "erros" not in st.session_state: st.session_state.erros = 0
 if "ultima_entrada" not in st.session_state: st.session_state.ultima_entrada = None
 
-# =========================================================
-# RELÓGIO DE JANELAS DE TEMPO
-# =========================================================
+# RELÓGIO OPERACIONAL
 agora = datetime.now()
 minutos_pagantes = [2,5,8,10,12,15,18,20,22,25,28,30,32,35,38,40,42,45,48,50,52,55,58,0]
 janela_ativa = agora.minute in minutos_pagantes
@@ -135,132 +133,3 @@ def salvar_padrao(padrao, resultado):
 def treinar_matriz_cached(velas_input):
     banco_retorno = []
     total_velas = len(velas_input)
-    if total_velas >= 5:
-        historico_temporario = []
-        for idx, valor in enumerate(velas_input):
-            distancia_do_fim = total_velas - idx
-            if distancia_do_fim <= 200: peso = 4       
-            elif distancia_do_fim <= 800: peso = 2    
-            else: peso = 1                             
-            
-            if len(historico_temporario) >= 4:
-                padrao_existente = gerar_padrao(historico_temporario)
-                if padrao_existente:
-                    for _ in range(peso):
-                        banco_retorno.append({"padrao": padrao_existente, "resultado": valor})
-            historico_temporario.append(valor)
-    return banco_retorno
-
-# Sincroniza a memória viva baseada no cache blindado
-st.session_state.historico = obter_velas_vivas()
-st.session_state.banco_padroes = treinar_matriz_cached(st.session_state.historico)
-
-# =========================================================
-# 📂 REPOSITÓRIO DE CARGA CSV 
-# =========================================================
-st.markdown('<div class="main-card">### 📂 TREINAR INTELIGÊNCIA EXTREMA</div>', unsafe_allow_html=True)
-arquivo = st.file_uploader("Suba um novo histórico CSV:", type=["csv", "txt"])
-
-if arquivo is not None:
-    linhas = arquivo.read().decode("utf-8").splitlines()
-    contador_carga = 0
-    for linha in linhas:
-        try:
-            limpo = linha.strip().replace('"', '').replace("'", "")
-            if not limpo: continue
-            partes = limpo.split()
-            for parte in partes:
-                val_limpo = parte.replace(",", ".")
-                salvar_vela_no_disco(float(val_limpo))
-                contador_carga += 1
-                break
-        except: pass
-    if contador_carga > 0:
-        st.cache_data.clear() # Limpa o cache antigo para ler o arquivo novo completo
-        st.session_state.historico = obter_velas_vivas()
-        st.session_state.banco_padroes = treinar_matriz_cached(st.session_state.historico)
-        st.rerun()
-
-def analisar_padroes():
-    memoria = {}
-    for registro in st.session_state.banco_padroes:
-        padrao = registro["padrao"]
-        resultado = registro["resultado"]
-        if not padrao: continue
-        if padrao not in memoria:
-            memoria[padrao] = {"total": 0, "roxa": 0, "rosa": 0, "erro": 0}
-        memoria[padrao]["total"] += 1
-        if resultado >= 2.0: memoria[padrao]["roxa"] += 1
-        else: memoria[padrao]["erro"] += 1
-        if resultado >= 10.0: memoria[padrao]["rosa"] += 1
-    return memoria
-
-def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
-    score = 0
-    if len(historico) < 4: return 0
-    v_atual = historico[-1]
-    ultimas5 = historico[-5:] if len(historico) >= 5 else historico
-    azuis = sum(1 for x in ultimas5 if x < 2.0)
-    extremos = sum(1 for x in ultimas5 if x < 1.20)
-
-    if azuis >= 4: score -= 10
-    if extremos >= 2: score -= 8
-    if v_atual < 1.10: score -= 10
-    if taxa_roxa >= 70: score += 5
-    if taxa_roxa >= 80: score += 3
-    if taxa_roxa >= 90: score += 4
-    if taxa_rosa >= 15: score += 3
-    if ocorrencias >= 3: score += 3
-    if ocorrencias >= 10: score += 4
-    if ocorrencias >= 25: score += 4
-    if janela_ativa: score += 2
-    if st.session_state.distancia_rosa >= 10: score += 2
-    if len(historico) >= 2 and historico[-2] >= 2.0: score += 2
-    return score
-
-# =========================================================
-# PAINEL DE ENTRADA MANUAL (FLUIDO E DIRETO NO CACHE)
-# =========================================================
-st.markdown("<br>", unsafe_allow_html=True)
-banca = st.number_input("Banca Inicial (R$):", min_value=0.0, value=20.0, step=1.0)
-vela = st.number_input("Digite a última vela:", min_value=0.0, format="%.2f", step=0.01)
-
-if st.button("CALCULAR PROBABILIDADE"):
-    # 1. Contabilidade Real de Placar baseada na leitura prévia
-    if st.session_state.ultima_entrada in ["ROXA", "ROSA"]:
-        if st.session_state.ultima_entrada == "ROXA" and vela >= 2.0: st.session_state.acertos += 1
-        elif st.session_state.ultima_entrada == "ROSA" and vela >= 10.0: st.session_state.acertos += 1
-        else: st.session_state.erros += 1
-
-    # 2. Gravação em Disco e Injeção Rápida na sessão corrente (Evita o Delay de leitura!)
-    salvar_vela_no_disco(vela)
-    st.session_state.historico.append(vela)
-    
-    if len(st.session_state.historico) >= 5:
-        hist_previo = st.session_state.historico[:-1]
-        pad_man = gerar_padrao(hist_previo)
-        if pad_man:
-            # Multiplica pelo peso máximo recente por ser clique real de agora
-            for _ in range(4):
-                st.session_state.banco_padroes.append({"padrao": pad_man, "resultado": vela})
-
-    if vela >= 10.0: st.session_state.distancia_rosa = 0
-    else: st.session_state.distancia_rosa += 1
-    st.rerun()
-
-# =========================================================
-# MOTOR PREDITIVO OPERACIONAL ULTRA VELOZ
-# =========================================================
-historico_atual = st.session_state.historico
-padrao = gerar_padrao(historico_atual)
-memoria = analisar_padroes()
-
-sinal, col_card, status, confianca, entrada_gerada = "AGUARDAR ✋", "red-card", "MONITORANDO FLUXO VIVO", "---", None
-taxa_roxa, taxa_rosa, ocorrencias = 0.0, 0.0, 0
-
-if len(historico_atual) >= 20:
-    if padrao and padrao in memoria:
-        dados = memoria[padrao]
-        ocorrencias = dados["total"]
-        if ocorrencias > 0:
-            taxa_roxa = (dados["roxa"] / ocorrencias) *
