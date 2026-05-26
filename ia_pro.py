@@ -32,7 +32,7 @@ if not st.session_state.autenticado:
     st.stop()
 
 # =========================================================
-# CSS PREMIUM RE-ESTILIZADO (PAINEL SEGURO)
+# CSS PREMIUM RE-ESTILIZADO (ESTÁVEL E FIXO)
 # =========================================================
 st.markdown("""
 <style>
@@ -70,7 +70,7 @@ def carregar_banco_do_disco():
     return velas
 
 # =========================================================
-# INICIALIZAÇÃO DE VARIÁVEIS DE SESSÃO
+# INICIALIZAÇÃO SEGURA DE VARIÁVEIS DE SESSÃO
 # =========================================================
 if "historico" not in st.session_state:
     st.session_state.historico = carregar_banco_do_disco()
@@ -98,25 +98,6 @@ st.markdown(f"""
 st.title("🎯 SNIPER OURO IA EXTREME")
 
 # =========================================================
-# 🧠 DIRETRIZES DO MANIFESTO INSTITUCIONAL
-# =========================================================
-with st.expander("🧠 DIRETRIZES DA MENTALIDADE SNIPER ELITE"):
-    st.markdown("""
-    <div class="manifesto-card">
-    <p style='color:#f59e0b !important; font-weight:bold; font-size:16px; margin-top:0;'>🛡️ O SEGREDO NÃO É PREVER TUDO, É ELIMINAR O RISCO RUIM</p>
-    <p style='font-size:14px; color:#c9d1d9;'>O algoritmo do mercado muda de intensidade e frequência. Sistemas profissionais trabalham com <b>Vantagem Matemática Contextual</b>, operando pouco e recusando sinais medianos.</p>
-    <table style='width:100%; border-collapse: collapse; margin-top:10px;'>
-        <tr><th>NÍVEL DO SISTEMA</th><th>ASSERTIVIDADE REAL ESPERADA</th></tr>
-        <tr><td>🔴 Amador / Fake</td><td>35% a 50% (Gera ruído aleatório)</td></tr>
-        <tr><td>🟡 Médio Comercial</td><td>50% a 60% (Entra sem contexto)</td></tr>
-        <tr><td>🟢 Bom de Mercado</td><td>60% a 70% (Histórico simples)</td></tr>
-        <tr><td>🔵 <b>Profissional Quant</b></td><td><b>70% a 80% (Filtros de Defesa Ativos)</b></td></tr>
-        <tr><td>👑 Sniper Elite</td><td>80%+ (Apenas em Confluências Raras)</td></tr>
-    </table>
-    </div>
-    """, unsafe_allow_html=True)
-
-# =========================================================
 # CLASSIFICAÇÃO INTELIGENTE DE 6 CAMADAS
 # =========================================================
 def classificar_vela(valor):
@@ -134,7 +115,6 @@ def gerar_padrao(historico):
 def salvar_padrao(padrao, resultado):
     st.session_state.banco_padroes.append({"padrao": padrao, "resultado": resultado})
 
-# MODULO DE RE-TREINAMENTO OPERACIONAL (4 VELAS)
 def treinar_matriz_completa():
     st.session_state.banco_padroes = []
     total_velas = len(st.session_state.historico)
@@ -157,7 +137,7 @@ if len(st.session_state.historico) > 0 and len(st.session_state.banco_padroes) =
     treinar_matriz_completa()
 
 # =========================================================
-# 📂 REPOSITÓRIO DE CARGA CSV 
+# CARGA CSV 
 # =========================================================
 st.markdown('<div class="main-card">### 📂 TREINAR INTELIGÊNCIA EXTREMA</div>', unsafe_allow_html=True)
 arquivo = st.file_uploader("Suba um novo histórico CSV para expandir o cérebro da IA:", type=["csv", "txt"])
@@ -180,7 +160,7 @@ if arquivo is not None:
     if contador_carga > 0:
         st.session_state.historico = carregar_banco_do_disco()
         treinar_matriz_completa()
-        st.success(f"🔥 Banco permanente expandido com +{contador_carga} velas com sucesso!")
+        st.success(f"🔥 Banco permanente expandido com +{contador_carga} velas!")
         st.rerun()
 
 # =========================================================
@@ -203,48 +183,43 @@ def analisar_padroes():
         if resultado >= 10.0: memoria[padrao]["rosa"] += 1
     return memoria
 
-# =========================================================
-# SCORE EXTREMO CALIBRADO NO PONTO IDEAL
-# =========================================================
 def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
     score = 0
     if len(historico) < 4: return 0
-
     v_atual = historico[-1]
     ultimas5 = historico[-5:] if len(historico) >= 5 else historico
-
     azuis = sum(1 for x in ultimas5 if x < 2.0)
     extremos = sum(1 for x in ultimas5 if x < 1.20)
 
     if azuis >= 4: score -= 10
     if extremos >= 2: score -= 8
     if v_atual < 1.10: score -= 10
-
     if taxa_roxa >= 70: score += 5
     if taxa_roxa >= 80: score += 3
     if taxa_roxa >= 90: score += 4
     if taxa_rosa >= 15: score += 3
-    
     if ocorrencias >= 3: score += 3
     if ocorrencias >= 10: score += 4
     if ocorrencias >= 25: score += 4
-    
     if janela_ativa: score += 2
     if st.session_state.distancia_rosa >= 10: score += 2
     if len(historico) >= 2 and historico[-2] >= 2.0: score += 2
     return score
 
 # =========================================================
-# PROCESSAMENTO CENTRAL EXTREMO (SISTEMA INTEGRAL CORRIGIDO)
+# EXECUÇÃO DA ÁRVORE LOGICA FLUIDA (SEM INTERRUPÇÃO DE TELA)
 # =========================================================
-def processar_sinal_v3(historico):
-    if len(historico) < 20:
-        return "ANALISANDO...", "red-card", f"ALIMENTE MAIS O SISTEMA ({len(historico)}/20 VELAS)", "---", None
+historico_atual = st.session_state.historico
+padrao = gerar_padrao(historico_atual)
+memoria = analisar_padroes()
 
-    padrao = gerar_padrao(historico)
-    memoria = analisar_padroes()
+# Valores Padrão de Inicialização
+sinal, col_card, status, confianca, entrada_gerada = "ANALISANDO...", "red-card", "ALIMENTE O SISTEMA", "---", None
+
+if len(historico_atual) < 20:
+    status = f"ALIMENTE MAIS O SISTEMA ({len(historico_atual)}/20 VELAS)"
+else:
     taxa_roxa, taxa_rosa, ocorrencias = 0.0, 0.0, 0
-
     if padrao and padrao in memoria:
         dados = memoria[padrao]
         ocorrencias = dados["total"]
@@ -252,55 +227,37 @@ def processar_sinal_v3(historico):
             taxa_roxa = (dados["roxa"] / ocorrencias) * 100
             taxa_rosa = (dados["rosa"] / ocorrencias) * 100
 
-    if ocorrencias < 3:  
-        return "🚫 ZONA PROIBIDA", "red-card", f"PADRÃO ISOLADO ({padrao if padrao else '---'}) | OCORRÊNCIAS EM BASE: {ocorrencias}/3 MÍNIMAS", "---", None
+    if ocorrencias < 3:
+        sinal, col_card = "🚫 ZONA PROIBIDA", "red-card"
+        status = f"PADRÃO ISOLADO ({padrao if padrao else '---'}) | OCORRÊNCIAS: {ocorrencias}/3 MÍNIMAS"
+    elif taxa_roxa < 70.0:
+        sinal, col_card = "🚫 SEM FORÇA ESTATÍSTICA", "red-card"
+        status = f"TAXA HISTÓRICA INSUFICIENTE ({taxa_roxa:.1f}%)"
+    else:
+        score = calcular_score(historico_atual, taxa_roxa, taxa_rosa, ocorrencias)
+        if score < 10:
+            sinal, col_card = "🚫 SCORE INSUFICIENTE", "red-card"
+            status = f"CONFLUÊNCIA DE CRITÉRIOS BAIXA (SCORE ATUAL: {score}/10)"
+        elif score >= 16:
+            sinal, col_card = f"💎 ENTRADA EXTREMA ({padrao})", "green-card"
+            status = f"PADRÃO ELITE CRÍTICO | ROXA {taxa_roxa:.1f}% | ROSA {taxa_rosa:.1f}% | SCORE {score}"
+            confianca, entrada_gerada = "99%", "ROXA"
+        elif score >= 10:
+            sinal, col_card = f"⚡ ENTRADA SNIPER ({padrao})", "main-card"
+            status = f"PADRÃO PREMIUM CONFLUENTE | ROXA {taxa_roxa:.1f}% | SCORE {score}"
+            confianca, entrada_gerada = "92%", "ROXA"
+        elif taxa_rosa >= 25 and st.session_state.distancia_rosa >= 10:
+            sinal, col_card = f"🌸 BUSCAR ROSA ({padrao})", "green-card"
+            status = f"ZONA ALTA MATURADA | CHANCE ROSA {taxa_rosa:.1f}%"
+            confianca, entrada_gerada = "94%", "ROSA"
+        else:
+            sinal, col_card = "AGUARDAR ✋", "red-card"
+            status = f"AGUARDANDO REFORÇO DE FLUXO CONTEXTUAL (SCORE: {score})"
 
-    if taxa_roxa < 70.0:  
-        return "🚫 SEM FORÇA ESTATÍSTICA", "red-card", f"TAXA HISTÓRICA INSUFICIENTE ({taxa_roxa:.1f}%)", "---", None
-
-    score = calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias)
-
-    if score < 10:  
-        return "🚫 SCORE INSUFICIENTE", "red-card", f"CONFLUÊNCIA DE CRITÉRIOS BAIXA (SCORE ATUAL: {score}/10)", "---", None
-
-    if score >= 16:
-        return f"💎 ENTRADA EXTREMA ({padrao})", "green-card", f"PADRÃO ELITE CRÍTICO | ROXA {taxa_roxa:.1f}% | ROSA {taxa_rosa:.1f}% | SCORE {score}", "99%", "ROXA"
-    if score >= 10:
-        return f"⚡ ENTRADA SNIPER ({padrao})", "main-card", f"PADRÃO PREMIUM CONFLUENTE | ROXA {taxa_roxa:.1f}% | SCORE {score}", "92%", "ROXA"
-    if taxa_rosa >= 25 and st.session_state.distancia_rosa >= 10:
-        return f"🌸 BUSCAR ROSA ({padrao})", "green-card", f"ZONA ALTA MATURADA | CHANCE ROSA {taxa_rosa:.1f}%", "94%", "ROSA"
-    
-    return "AGUARDAR ✋", "red-card", f"AGUARDANDO REFORÇO DE FLUXO CONTEXTUAL (SCORE ATUAL: {score})", "---", None
-
-# =========================================================
-# ENTRADA MANUAL REAL-TIME
-# =========================================================
-st.markdown("<br>", unsafe_allow_html=True)
-banca = st.number_input("Banca Inicial (R$):", min_value=0.0, value=20.0, step=1.0)
-vela = st.number_input("Digite a última vela:", min_value=0.0, format="%.2f", step=0.01)
-
-if st.button("CALCULAR PROBABILIDADE"):
-    if st.session_state.ultima_entrada in ["ROXA", "ROSA"]:
-        if st.session_state.ultima_entrada == "ROXA":
-            if vela >= 2.0: st.session_state.acertos += 1
-            else: st.session_state.erros += 1
-        elif st.session_state.ultima_entrada == "ROSA":
-            if vela >= 10.0: st.session_state.acertos += 1
-            else: st.session_state.erros += 1
-
-    salvar_vela_no_disco(vela)
-    st.session_state.historico = carregar_banco_do_disco()
-    treinar_matriz_completa()
-
-    if vela >= 10.0: st.session_state.distancia_rosa = 0
-    else: st.session_state.distancia_rosa += 1
-
-# EXECUÇÃO DO MOTOR PREDITIVO
-sinal, col_card, status, confianca, entrada_gerada = processar_sinal_v3(st.session_state.historico)
 st.session_state.ultima_entrada = entrada_gerada
 
 # =========================================================
-# PAINEL PRINCIPAL DE EXIBIÇÃO (FIXO NO TOPO)
+# PAINEL PRINCIPAL DE EXIBIÇÃO DO SINAL
 # =========================================================
 st.markdown(f"""
 <div class="{col_card}">
@@ -309,7 +266,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# EXIBIÇÃO RADAR ROSA
+# EXIBIÇÃO RADAR ROSA (AGORA RODA SEMPRE!)
 st.markdown(f"""
 <div class="main-card">
 <h3>🌸 RADAR ROSA</h3>
@@ -318,7 +275,28 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # =========================================================
-# BLINDAGEM OPERACIONAL: RENDERIZAÇÃO MANDATÓRIA DO RODAPÉ
+# PAINEL DE ENTRADA MANUAL E PROCESSAMENTO DE CLIQUES
+# =========================================================
+st.markdown("<br>", unsafe_allow_html=True)
+banca = st.number_input("Banca Inicial (R$):", min_value=0.0, value=20.0, step=1.0)
+vela = st.number_input("Digite a última vela:", min_value=0.0, format="%.2f", step=0.01)
+
+if st.button("CALCULAR PROBABILIDADE"):
+    if st.session_state.ultima_entrada in ["ROXA", "ROSA"]:
+        if st.session_state.ultima_entrada == "ROXA" and vela >= 2.0: st.session_state.acertos += 1
+        elif st.session_state.ultima_entrada == "ROSA" and vela >= 10.0: st.session_state.acertos += 1
+        else: st.session_state.erros += 1
+
+    salvar_vela_no_disco(vela)
+    st.session_state.historico = carregar_banco_do_disco()
+    treinar_matriz_completa()
+
+    if vela >= 10.0: st.session_state.distancia_rosa = 0
+    else: st.session_state.distancia_rosa += 1
+    st.rerun()
+
+# =========================================================
+# RENDERIZAÇÃO MANDATÓRIA E INDEPENDENTE DO RODAPÉ
 # =========================================================
 total_jogadas = st.session_state.acertos + st.session_state.erros
 assertividade = (st.session_state.acertos / total_jogadas) * 100 if total_jogadas > 0 else 0.0
@@ -330,17 +308,14 @@ with col2: st.metric("❌ ERROS", st.session_state.erros)
 with col3: st.metric("📊 ASSERTIVIDADE", f"{assertividade:.1f}%")
 st.markdown("</div>", unsafe_allow_html=True)
 
-# TOP PADRÕES DO LABORATÓRIO (IMUNIZADO CONTRA LISTAS VAZIAS)
+# LISTA DOS TOP PADRÕES
 st.markdown("<div class='main-card'><h3 style='text-align:center; color:#00ff00 !important; margin:0 0 15px 0;'>🏆 TOP PADRÕES DO LABORATÓRIO</h3>", unsafe_allow_html=True)
-memoria_mapeada = analisar_padroes()
 ranking = []
-
-if memoria_mapeada:
-    for pad, dados in memoria_mapeada.items():
-        if dados["total"] >= 3: 
-            taxa = (dados["roxa"] / dados["total"]) * 100
-            ranking.append({"padrao": pad, "taxa": taxa, "total": dados["total"]})
-
+if memoria:
+    for pad_ch, dados_ch in memoria.items():
+        if dados_ch["total"] >= 3: 
+            tx = (dados_ch["roxa"] / dados_ch["total"]) * 100
+            ranking.append({"padrao": pad_ch, "taxa": tx, "total": dados_ch["total"]})
 ranking = sorted(ranking, key=lambda x: x["taxa"], reverse=True)[:5]
 
 if ranking:
@@ -350,12 +325,12 @@ else:
     st.markdown("<p style='color:#888; text-align:center; margin:0;'>Aguardando amostragem estável de mercado (Mínimo: 3 ocorrências).</p>", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
-# LINHA DO TEMPO RECENTE FIXA
+# LINHA DO TEMPO FIXA (ÚLTIMAS VELAS OPERADAS)
 if len(st.session_state.historico) > 0:
     velas_texto = " → ".join([f"[{v}]" for v in st.session_state.historico[-15:]])
     st.markdown(f"<p style='color:#888; margin-top:15px;'><b>Últimas velas (Total em Banco Fixo: {len(st.session_state.historico)}):</b> {velas_texto}</p>", unsafe_allow_html=True)
 
-# CONTROLES DE SEGURANÇA E RESET NO RODAPÉ
+# BOTOES DE CONTROLE E LIMPEZA
 st.markdown("<br>", unsafe_allow_html=True)
 if st.button("LIMPAR SESSÃO DA TELA"):
     st.session_state.acertos = 0
@@ -364,8 +339,7 @@ if st.button("LIMPAR SESSÃO DA TELA"):
     st.rerun()
 
 if st.button("DELETAR TODO BANCO PERMANENTE"):
-    if os.path.exists(ARQUIVO_BANCO):
-        os.remove(ARQUIVO_BANCO)
+    if os.path.exists(ARQUIVO_BANCO): os.remove(ARQUIVO_BANCO)
     st.session_state.historico = []
     st.session_state.banco_padroes = []
     st.session_state.distancia_rosa = 0
