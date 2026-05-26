@@ -268,6 +268,16 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# =========================================================
+# RADAR ROSA (REINSERIDO CORRETAMENTE NO CORPO DA TELA)
+# =========================================================
+st.markdown(f"""
+<div class="blue-card">
+<h3>🌸 RADAR ROSA</h3>
+<p><b>{st.session_state.distancia_rosa}</b> rodadas consecutivas sem alvo alto.</p>
+</div>
+""", unsafe_allow_html=True)
+
 # PERFORMANCE DA IA
 total = st.session_state.acertos + st.session_state.erros
 assertividade = (st.session_state.acertos / total) * 100 if total > 0 else 0
