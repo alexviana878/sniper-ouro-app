@@ -32,7 +32,7 @@ if not st.session_state.autenticado:
     st.stop()
 
 # =========================================================
-# CSS PREMIUM RE-ESTILIZADO
+# CSS PREMIUM RE-ESTILIZADO (FIXO E ESTÁVEL)
 # =========================================================
 st.markdown("""
 <style>
@@ -127,7 +127,6 @@ def classificar_vela(valor):
     elif valor < 20.00: return "A" 
     else: return "E"               
 
-# 🎯 UPGRADE EXTREMO: REDUÇÃO DA JANELA DE PADRÃO DE 5 PARA 4 ELEMENTOS
 def gerar_padrao(historico):
     if len(historico) < 4: return None
     return "-".join([classificar_vela(v) for v in historico[-4:]])
@@ -226,7 +225,6 @@ def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
     if taxa_roxa >= 90: score += 4
     if taxa_rosa >= 15: score += 3
     
-    # Pesos de amostragem ajustados para o Ponto Ideal
     if ocorrencias >= 3: score += 3
     if ocorrencias >= 10: score += 4
     if ocorrencias >= 25: score += 4
@@ -254,7 +252,6 @@ def processar_sinal(historico):
             taxa_roxa = (dados["roxa"] / ocorrencias) * 100
             taxa_rosa = (dados["rosa"] / ocorrencias) * 100
 
-    # 🎯 CONFIGURAÇÃO DAS TRAVAS NO PONTO IDEAL EXIGIDO (Ocorrência Mínima 3 | Score Mínimo 10)
     if ocorrencias < 3:  
         return "🚫 ZONA PROIBIDA", "red-card", f"PADRÃO ISOLADO ({padrao if padrao else '---'}) | OCORRÊNCIAS EM BASE: {ocorrencias}/3 MÍNIMAS", "---", None
 
@@ -266,7 +263,6 @@ def processar_sinal(historico):
     if score < 10:  
         return "🚫 SCORE INSUFICIENTE", "red-card", f"CONFLUÊNCIA DE CRITÉRIOS BAIXA (SCORE ATUAL: {score}/10)", "---", None
 
-    # --- DISPARO DE SINAIS CONSOLIDADO ---
     if score >= 16:
         return f"💎 ENTRADA EXTREMA ({padrao})", "green-card", f"PADRÃO ELITE CRÍTICO | ROXA {taxa_roxa:.1f}% | ROSA {taxa_rosa:.1f}% | SCORE {score}", "99%", "ROXA"
     if score >= 10:
@@ -283,6 +279,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 banca = st.number_input("Banca Inicial (R$):", min_value=0.0, value=20.0, step=1.0)
 vela = st.number_input("Digite a última vela:", min_value=0.0, format="%.2f", step=0.01)
 
+# REMOVIDO ST.RERUN() DO BOTÃO PARA EVITAR PISCAR DA TELA E MANTER O HISTÓRICO VIVO
 if st.button("CALCULAR PROBABILIDADE"):
     if st.session_state.ultima_entrada in ["ROXA", "ROSA"]:
         if st.session_state.ultima_entrada == "ROXA":
@@ -292,16 +289,12 @@ if st.button("CALCULAR PROBABILIDADE"):
             if vela >= 10.0: st.session_state.acertos += 1
             else: st.session_state.erros += 1
 
-    # Gravação acumulativa no disco
     salvar_vela_no_disco(vela)
-    
     st.session_state.historico = carregar_banco_do_disco()
     treinar_matriz_completa()
 
     if vela >= 10.0: st.session_state.distancia_rosa = 0
     else: st.session_state.distancia_rosa += 1
-
-    st.rerun()
 
 # EXECUÇÃO DO MOTOR PREDITIVO
 sinal, col_card, status, confianca, entrada_gerada = processar_sinal(st.session_state.historico)
@@ -324,59 +317,3 @@ st.markdown(f"""
 <p style="margin:5px 0 0 0;">Distância atual: <b>{st.session_state.distancia_rosa}</b> rodadas sem estourar alvos altos</p>
 </div>
 """, unsafe_allow_html=True)
-
-# MONITOR DE PERFORMANCE
-total_jogadas = st.session_state.acertos + st.session_state.erros
-assertividade = (st.session_state.acertos / total_jogadas) * 100 if total_jogadas > 0 else 0.0
-
-st.markdown("<div class='gold-card'><h3 style='text-align:center;color:#f59e0b !important; margin:0 0 10px 0;'>👑 PERFORMANCE DA IA</h3>", unsafe_allow_html=True)
-col1, col2, col3 = st.columns(3)
-with col1: st.metric("✅ ACERTOS", st.session_state.acertos)
-with col2: st.metric("❌ ERROS", st.session_state.erros)
-with col3: st.metric("📊 ASSERTIVIDADE", f"{assertividade:.1f}%")
-st.markdown("</div>", unsafe_allow_html=True)
-
-# EXIBIÇÃO DOS TOP PADRÕES (MIN: 3 OCORRÊNCIAS)
-st.markdown("<div class='main-card'><h3 style='text-align:center; color:#00ff00 !important; margin:0 0 15px 0;'>🏆 TOP PADRÕES DO LABORATÓRIO</h3>", unsafe_allow_html=True)
-memoria_mapeada = analisar_padroes()
-ranking = []
-
-if memoria_mapeada:
-    for pad, dados in memoria_mapeada.items():
-        if dados["total"] >= 3: 
-            taxa = (dados["roxa"] / dados["total"]) * 100
-            ranking.append({"padrao": pad, "taxa": taxa, "total": dados["total"]})
-
-ranking = sorted(ranking, key=lambda x: x["taxa"], reverse=True)[:5]
-
-if ranking:
-    for item in ranking:
-        st.markdown(f"<p style='color:white; margin:5px 0;'>💎 <b>{item['padrao']}</b> → <span style='color:#00ff00;'>{item['taxa']:.1f}%</span> ({item['total']} ocorrências)</p>", unsafe_allow_html=True)
-else:
-    st.markdown("<p style='color:#888; text-align:center; margin:0;'>Aguardando amostragem estável (Mínimo: 3 ocorrências).</p>", unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
-
-# LINHA DO TEMPO RECENTE
-if len(st.session_state.historico) > 0:
-    velas_texto = " → ".join([f"[{v}]" for v in st.session_state.historico[-15:]])
-    st.markdown(f"<p style='color:#888; margin-top:15px;'><b>Últimas velas (Total em Banco Fixo: {len(st.session_state.historico)}):</b> {velas_texto}</p>", unsafe_allow_html=True)
-
-# RESETS
-st.markdown("<br>", unsafe_allow_html=True)
-if st.button("LIMPAR SESSÃO DA TELA"):
-    st.session_state.acertos = 0
-    st.session_state.erros = 0
-    st.session_state.ultima_entrada = None
-    st.rerun()
-
-if st.button("DELETAR TODO BANCO PERMANENTE"):
-    if os.path.exists(ARQUIVO_BANCO):
-        os.remove(ARQUIVO_BANCO)
-    st.session_state.historico = []
-    st.session_state.banco_padroes = []
-    st.session_state.distancia_rosa = 0
-    st.session_state.acertos = 0
-    st.session_state.erros = 0
-    st.session_state.ultima_entrada = None
-    st.success("Banco destruído.")
-    st.rerun()
