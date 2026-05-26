@@ -100,8 +100,8 @@ janela_ativa = agora.minute in minutos_pagantes
 
 st.markdown(f"""
 <div class="clock-card">
-<h2 style='color:#00ff66 !important;margin:0;'>{agora.strftime("%H:%M:%S")}</h2>
-<p style='margin:0;color:#00ff66 !important;'>{"⚠️ ZONA PAGANTE" if janela_ativa else "MONITORANDO MERCADO"}</p>
+<h2 style="color:#00ff66 !important;margin:0;">{agora.strftime("%H:%M:%S")}</h2>
+<p style="margin:0;color:#00ff66 !important;">{"⚠️ ZONA PAGANTE" if janela_ativa else "MONITORANDO MERCADO"}</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -185,7 +185,6 @@ def calcular_score(historico, taxa_roxa, taxa_rosa, ocorrencias):
     return score
 
 def processar_sinal(historico):
-    # CORRIGIDO: Retorna strings limpas sem travar a renderização gráfica do painel
     if len(historico) < 30:
         return ("ANALISANDO...", "red-card", f"Sistema coletando dados ({len(historico)}/30)", "---", None)
 
@@ -229,7 +228,7 @@ st.session_state.ultima_entrada = entrada
 st.session_state.padr_disparado = gerar_padrao(st.session_state.historico)
 
 # =========================================================
-# INTERFACE EXIBIDA DESDE O INÍCIO (INPUTS DESBLOQUEADOS)
+# INTERFACE EXIBIDA CONTINUAMENTE (INPUTS DESBLOQUEADOS)
 # =========================================================
 st.markdown("<br>", unsafe_allow_html=True)
 vela = st.number_input("Digite a última vela:", min_value=0.0, format="%.2f", step=0.01)
@@ -273,14 +272,24 @@ st.markdown(f"""
 total = st.session_state.acertos + st.session_state.erros
 assertividade = (st.session_state.acertos / total) * 100 if total > 0 else 0
 
-st.markdown('<div class="gold-card"><h3 style='text-align:center;'>👑 PERFORMANCE DA IA PERSISTENTE</h3></div>', unsafe_allow_html=True)
+st.markdown("""
+<div class="gold-card">
+<h3 style="text-align:center;">👑 PERFORMANCE DA IA PERSISTENTE</h3>
+</div>
+""", unsafe_allow_html=True)
+
 c1, c2, c3 = st.columns(3)
 with c1: st.metric("✅ ACERTOS", st.session_state.acertos)
 with c2: st.metric("❌ ERROS", st.session_state.erros)
-with col3: st.metric("📊 ASSERTIVIDADE", f"{assertividade:.1f}%")
+with c3: st.metric("📊 ASSERTIVIDADE", f"{assertividade:.1f}%")
 
 # TOP PADRÕES
-st.markdown('<div class="main-card"><h3>🏆 TOP 5 PADRÕES DO MERCADO</h3></div>', unsafe_allow_html=True)
+st.markdown("""
+<div class="main-card">
+<h3>🏆 TOP 5 PADRÕES DO MERCADO</h3>
+</div>
+""", unsafe_allow_html=True)
+
 memoria_mapeada = analisar_padroes()
 ranking = []
 
@@ -292,26 +301,13 @@ ranking = sorted(ranking, key=lambda x: x["taxa"], reverse=True)[:5]
 
 if ranking:
     for item in ranking:
-        st.markdown(f'<div class="main-card">💎 <b>{item["padrao"]}</b><br>Taxa: <b>{item["taxa"]:.1f}%</b> | Ocorrências: <b>{item["total"]}</b></div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="main-card">
+        💎 <b>{item["padrao"]}</b><br>
+        Taxa: <b>{item["taxa"]:.1f}%</b> | Ocorrências: <b>{item["total"]}</b>
+        </div>
+        """, unsafe_allow_html=True)
 else:
     st.markdown("<p style='color:#888; text-align:center;'>Aguardando alimentação de dados estatísticos...</p>", unsafe_allow_html=True)
 
-# ÚLTIMAS VELAS OPERADAS
-if len(st.session_state.historico) > 0:
-    velas_texto = " → ".join([f"[{v}]" for v in st.session_state.historico[-15:]])
-    st.markdown(f"<p style='color:#999;'><b>Últimas velas (Total na Base Viva: {len(st.session_state.historico)}):</b><br>{velas_texto}</p>", unsafe_allow_html=True)
-
-# BOTÃO RESET GERAL
-if st.button("REINICIAR SISTEMA"):
-    if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
-    st.session_state.historico = []
-    st.session_state.banco_padroes = []
-    st.session_state.distancia_rosa = 0
-    st.session_state.acertos = 0
-    st.session_state.erros = 0
-    st.session_state.ultimos_resultados = []
-    st.session_state.bloqueados = {}
-    st.session_state.ultima_entrada = None
-    st.session_state.padr_disparado = None
-    salvar_memoria()
-    st.rerun()
+# ÚLTIMAS VELAS OPER
