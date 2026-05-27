@@ -86,7 +86,7 @@ if arquivo is not None and len(st.session_state.historico) == 0:
         try:
             valor = float(file_line.strip().replace(",", "."))
             if len(st.session_state.historico) >= 5:
-                padr = brain.generar_padrao(st.session_state.historico)
+                padr = brain.gerar_padrao(st.session_state.historico)
                 st.session_state.banco_padroes.append({"padrao": padr, "resultado": valor})
             st.session_state.historico.append(valor)
             if valor >= 10: st.session_state.distancia_rosa = 0
@@ -112,7 +112,7 @@ def processar_sinal(historico):
     if len(historico) < 30:
         return ("ANALISANDO...", "red-card", f"Sistema coletando dados ({len(historico)}/30)", "---", None, 0, "NEUTRA")
 
-    padrao = brain.generar_padrao(historico)
+    padrao = brain.gerar_padrao(historico)
     memoria = analisar_padroes()
     taxa_roxa, taxa_rosa, ocorrencias = 0, 0, 0
 
@@ -132,7 +132,6 @@ def processar_sinal(historico):
     if taxa_roxa < 70:
         return ("🚫 SEM FORÇA ESTATÍSTICA", "red-card", f"Taxa de acerto recente baixa ({taxa_roxa:.1f}%)", "---", None, 0, "NEUTRA")
 
-    # CONSULTA DIRETA AO NOSSO NÚCLEO SEPARADO
     score = brain.calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, st.session_state.ultimos_resultados, janela_ativa)
     fase = brain.detectar_fase(historico)
     pressao_radar = brain.calcular_pressao_radar(historico, janela_ativa)
@@ -146,7 +145,7 @@ def processar_sinal(historico):
 
 sinal, cor, status, confianca, entrada, pressao_radar_atual, fase_atual = processar_sinal(st.session_state.historico)
 st.session_state.ultima_entrada = entrada
-st.session_state.padr_disparado = brain.generar_padrao(st.session_state.historico)
+st.session_state.padr_disparado = brain.gerar_padrao(st.session_state.historico)
 
 st.markdown("<br>", unsafe_allow_html=True)
 vela = st.number_input("Digite a última vela:", min_value=0.0, format="%.2f", step=0.01)
@@ -166,7 +165,7 @@ if st.button("CALCULAR PROBABILIDADE"):
             st.session_state.bloqueados[padr_avaliado] += 1
 
     if len(st.session_state.historico) >= 5:
-        padrao_atual = brain.generar_padrao(st.session_state.historico)
+        padrao_atual = brain.gerar_padrao(st.session_state.historico)
         st.session_state.banco_padroes.append({"padrao": padrao_atual, "resultado": vela})
 
     st.session_state.historico.append(vela)
