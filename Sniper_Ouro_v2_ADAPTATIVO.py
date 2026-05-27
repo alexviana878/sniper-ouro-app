@@ -2,6 +2,10 @@ import streamlit as st
 from datetime import datetime
 import json
 import os
+import sys
+
+# Força o Python a encontrar o arquivo brain.py na pasta atual
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import brain  # CONEXÃO DIRETA COM O SEU NÚCLEO ISOLADO
 
 # =========================================================
