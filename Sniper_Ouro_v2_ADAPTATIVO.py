@@ -75,23 +75,23 @@ st.markdown(f"""
 
 st.title("🎯 SNIPER OURO IA ADAPTIVE")
 
-# IMPORTAÇÃO SUPER TURBO ULTRA ACELERADA
+# IMPORTAÇÃO COM LEITURA UNIVERSAL COMPLETA
 st.markdown('<div class="main-card"><h3>📂 TREINAR INTELIGÊNCIA VIVA</h3></div>', unsafe_allow_html=True)
-arquivo = st.file_uploader("Envie CSV/TXT com 1 vela por linha", type=["csv","txt"], key="uploader_adaptive_turbo")
+arquivo = st.file_uploader("Envie CSV/TXT com 1 vela por linha", type=["csv","txt"], key="uploader_adaptive_universal")
 
 if arquivo is not None and len(st.session_state.historico) == 0:
     conteudo = arquivo.read().decode("utf-8")
-    linhas = [ln.strip() for ln in conteudo.splitlines() if ln.strip()]
+    
+    # LEITURA UNIVERSAL: Divide por qualquer tipo de quebra de linha ou espaço, alcançando o fim do arquivo bruto
+    linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n") if ln.strip()]
     
     novo_historico = []
     novos_padroes = []
     dist_rosa = 0
     contador = 0
     
-    # Varre as linhas extraindo puramente os números de forma tolerante
     for file_line in linhas:
         try:
-            # Remove caracteres invisíveis ou espaços extras da linha
             limpo = "".join([c for c in file_line if c.isdigit() or c in [".", ","]])
             if not limpo: continue
             valor = float(limpo.replace(",", "."))
@@ -102,10 +102,8 @@ if arquivo is not None and len(st.session_state.historico) == 0:
             contador += 1
         except: pass
         
-    # Geração dos padrões em lote ultra rápida para economizar processamento
     if len(novo_historico) >= 6:
         for i in range(5, len(novo_historico)):
-            # Pega fatias consecutivas para treinar a IA instantaneamente
             fatia = novo_historico[i-5:i]
             padr = brain.gerar_padrao(fatia)
             novos_padroes.append({"padrao": padr, "resultado": novo_historico[i]})
@@ -114,7 +112,7 @@ if arquivo is not None and len(st.session_state.historico) == 0:
     st.session_state.banco_padroes = novos_padroes
     st.session_state.distancia_rosa = dist_rosa
     salvar_memoria()
-    st.success(f"🔥 Sucesso: {contador} velas injetadas com processamento de alta performance!")
+    st.success(f"🔥 Sucesso: {contador} velas injetadas com Leitura Universal Completa!")
     st.rerun()
 
 def analisar_padroes():
@@ -236,7 +234,7 @@ else:
     st.markdown("<p style='color:#888; text-align:center;'>Buscando padrões sobreviventes com alta amostragem...</p>", unsafe_allow_html=True)
 
 if len(st.session_state.historico) > 0:
-    velas_texto = " → ".join([f"[{v}]" for v in st.session_state.historico[-15:]])
+    velas_texto = " → ".join([f"[%s]" % v for v in st.session_state.historico[-15:]])
     st.markdown(f"<p style='color:#999;'><b>Últimas velas (Total na Base Viva: {len(st.session_state.historico)}):</b><br>{velas_texto}</p>", unsafe_allow_html=True)
 
 if st.button("REINICIAR SISTEMA"):
