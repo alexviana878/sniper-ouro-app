@@ -1,8 +1,3 @@
-# brain.py
-# =========================================================
-# SNIPER OURO IA ADAPTIVE - NÚCLEO INTELIGENTE ISOLADO
-# =========================================================
-
 def classificar_vela(valor):
     if valor < 1.20: return "X"
     elif valor < 2.00: return "B"
