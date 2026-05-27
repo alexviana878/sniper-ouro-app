@@ -75,26 +75,46 @@ st.markdown(f"""
 
 st.title("🎯 SNIPER OURO IA ADAPTIVE")
 
-# IMPORTAÇÃO CSV
+# IMPORTAÇÃO SUPER TURBO ULTRA ACELERADA
 st.markdown('<div class="main-card"><h3>📂 TREINAR INTELIGÊNCIA VIVA</h3></div>', unsafe_allow_html=True)
-arquivo = st.file_uploader("Envie CSV/TXT com 1 vela por linha", type=["csv","txt"], key="uploader_adaptive")
+arquivo = st.file_uploader("Envie CSV/TXT com 1 vela por linha", type=["csv","txt"], key="uploader_adaptive_turbo")
 
 if arquivo is not None and len(st.session_state.historico) == 0:
-    linhas = arquivo.read().decode("utf-8").splitlines()
+    conteudo = arquivo.read().decode("utf-8")
+    linhas = [ln.strip() for ln in conteudo.splitlines() if ln.strip()]
+    
+    novo_historico = []
+    novos_padroes = []
+    dist_rosa = 0
     contador = 0
+    
+    # Varre as linhas extraindo puramente os números de forma tolerante
     for file_line in linhas:
         try:
-            valor = float(file_line.strip().replace(",", "."))
-            if len(st.session_state.historico) >= 5:
-                padr = brain.gerar_padrao(st.session_state.historico)
-                st.session_state.banco_padroes.append({"padrao": padr, "resultado": valor})
-            st.session_state.historico.append(valor)
-            if valor >= 10: st.session_state.distancia_rosa = 0
-            else: st.session_state.distancia_rosa += 1
+            # Remove caracteres invisíveis ou espaços extras da linha
+            limpo = "".join([c for c in file_line if c.isdigit() or c in [".", ","]])
+            if not limpo: continue
+            valor = float(limpo.replace(",", "."))
+            
+            novo_historico.append(valor)
+            if valor >= 10: dist_rosa = 0
+            else: dist_rosa += 1
             contador += 1
         except: pass
+        
+    # Geração dos padrões em lote ultra rápida para economizar processamento
+    if len(novo_historico) >= 6:
+        for i in range(5, len(novo_historico)):
+            # Pega fatias consecutivas para treinar a IA instantaneamente
+            fatia = novo_historico[i-5:i]
+            padr = brain.gerar_padrao(fatia)
+            novos_padroes.append({"padrao": padr, "resultado": novo_historico[i]})
+
+    st.session_state.historico = novo_historico
+    st.session_state.banco_padroes = novos_padroes
+    st.session_state.distancia_rosa = dist_rosa
     salvar_memoria()
-    st.success(f"🔥 Sucesso: {contador} velas injetadas na V2!")
+    st.success(f"🔥 Sucesso: {contador} velas injetadas com processamento de alta performance!")
     st.rerun()
 
 def analisar_padroes():
