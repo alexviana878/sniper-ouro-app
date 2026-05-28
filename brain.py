@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA PREMIUM V5: EQUILÍBRIO DE PESOS E PRESSÃO VIVO
+# ECOSSISTEMA PREMIUM V6: FILTROS DE EXAUSTÃO E CONCURSO ELITE
 # =========================================================
 
 def classificar_vela(valor):
@@ -103,31 +103,4 @@ def detectar_expansao(historico):
     score += compressao * 0.5
     return min(int(score), 100)
 
-def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel):
-    if mercado_instavel:
-        return "🚫 AMBIENTE INSTÁVEL", 0
-
-    if expansion_score >= 85 and adaptive_score >= 70 and radar_score >= 70:
-        final_rosa = (adaptive_score * 0.35) + (radar_score * 0.25) + (expansion_score * 0.40)
-        return "🌸 POSSÍVEL ROSA ELITE", min(int(final_rosa), 100)
-
-    peso_adaptive = 0.50
-    peso_radar = 0.20
-    peso_expansion = 0.30
-    
-    if expansion_score >= 70:
-        peso_adaptive = 0.35
-        peso_radar = 0.25
-        peso_expansion = 0.40
-        
-    final = (adaptive_score * peso_adaptive) + (radar_score * peso_radar) + (expansion_score * peso_expansion)
-    
-    if fase_macro == "DEFENSIVA":
-        final -= 20
-        
-    final = max(0, min(100, int(final)))
-    
-    if final >= 92: return "🔥 ENTRADA ELITE (2x)", final
-    if final >= 82: return "🟢 BOA CHANCE AGORA (2x)", final
-    if final >= 50: return "🟡 OBSERVANDO", final
-    return "🔴 AGUARDAR", final
+# ⚠️ AJUSTE 2: FUNÇÃO DETECTAR EXA
