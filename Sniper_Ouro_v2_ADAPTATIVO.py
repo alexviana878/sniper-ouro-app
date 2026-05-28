@@ -194,7 +194,6 @@ if len(st.session_state.historico) >= 30:
         adaptive_score = max(adaptive_score - 10, 0)
         radar_score = max(radar_score - 8, 0)
         
-    # ⚠️ AJUSTE 2: CLAMPS INLINE ADICIONADOS PARA IMPEDIR QUE OS ESCORES EXCEDAM O TETO DE 100
     bonus_aceleracao = 0
     if aceleracoes["roxa"]:
         bonus_aceleracao += 4
@@ -207,7 +206,8 @@ if len(st.session_state.historico) >= 30:
         
     adaptive_score = min(adaptive_score + min(bonus_aceleracao, 8), 100)
         
-    if mercado_favoravel: adaptive_score = min(adaptive_score + 6, 100)
+    # ⚠️ AJUSTE STRATÉGICO 2: AMORTECEDOR DE MERCADO FAVORÁVEL REDUZIDO DE +6 PARA +4
+    if mercado_favoravel: adaptive_score = min(adaptive_score + 4, 100)
     if mercado_instavel: adaptive_score = max(adaptive_score - 10, 0)
     if exaustao_detectada: adaptive_score = max(adaptive_score - 6, 0)
     
@@ -217,7 +217,6 @@ if len(st.session_state.historico) >= 30:
     
     sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel)
     
-    # ⚠️ AJUSTE 3: ALINHAMENTO VISUAL DE UX DE SCORES ELITE FIXANDO O PISO EM 68%
     if "ELITE" in sinal_final and score_final < 68:
         score_final = 68
         
