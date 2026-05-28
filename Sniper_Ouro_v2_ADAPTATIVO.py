@@ -73,10 +73,13 @@ if "dados_carregados" not in st.session_state:
     st.session_state.ultimo_contexto = None
     st.session_state.dados_carregados = True
 
+# ⚠️ AJUSTE CRÍTICO 1: CORREÇÃO DO BUG DE DECAIMENTO DA QUARENTENA POR REVERSÃO E ALTO VALOR
 if st.session_state.quarentena:
     nova_quarentena = {}
     for ctx, rodadas in st.session_state.quarentena.items():
-        decaimento = 3 if "ROSA" in ctx else 2
+        decaimento = 2
+        if "_A_" in ctx or "_E_" in ctx or ctx.startswith("A-") or ctx.startswith("E-"):
+            decaimento = 3
         nova = rodadas - decaimento
         if nova > 0: nova_quarentena[ctx] = nova
     st.session_state.quarentena = nova_quarentena
@@ -130,7 +133,6 @@ if len(st.session_state.historico) >= 30:
     radar_score = brain.calcular_pressao_radar(st.session_state.historico, janela_ativa)
     expansion_score = brain.detectar_expansao(st.session_state.historico)
     
-    # ⚠️ AJUSTE 2: DETECÇÃO DE ACELERAÇÕES E MUDANÇA DE RITMO DO FLUXO
     aceleracoes = brain.detectar_aceleracao(st.session_state.historico)
     
     banco = analisar_banco()
@@ -185,26 +187,29 @@ if len(st.session_state.historico) >= 30:
     adaptive_score -= min(peso_cicatriz * 1.5, 18)
     adaptive_score = max(adaptive_score, 0)
     
-    # ⚠️ AJUSTE 3: NOVOS ACORDOS DE AMBIENTES CRÍTICOS E FAVORÁVEIS
+    # Sincronização de travas de segurança
     mercado_instavel = tx_roxa_quente < 38 and radar_score < 50 and expansion_score < 48
     mercado_favoravel = tx_roxa_quente >= 58 and radar_score >= 65
     
-    # ⚠️ AJUSTE 4: DETECTOR DE EXAUSTÃO ATENUANDO SCORE ANTES DOS BÔNUS
+    # Aplicação da nova Exaustão Estatística Antecipada
     exaustao_detectada = brain.detectar_exaustao(st.session_state.historico)
     if exaustao_detectada:
         adaptive_score = max(adaptive_score - 10, 0)
         radar_score = max(radar_score - 8, 0)
         
-    # ⚠️ AJUSTE 3: INJEÇÃO DOS BÔNUS CONTEXTUAIS DE TRANSIÇÃO E ACELERAÇÃO
+    # ⚠️ AJUSTE CRÍTICO 2: AMORTECEDOR DE ACELERAÇÃO (PreSERVA O TETO EM 8 PONTOS MÁXIMOS)
+    bonus_aceleracao = 0
     if aceleracoes["roxa"]:
-        adaptive_score += 4
-        radar_score += 5
+        bonus_aceleracao += 4
+        radar_score += 4
     if aceleracoes["rosa"]:
-        expansion_score += 8
+        expansion_score += 6
+        bonus_aceleracao += 3
     if aceleracoes["densidade"]:
-        adaptive_score += 6
+        bonus_aceleracao += 4
         
-    # ⚠️ AJUSTE 5: MULTIPLICADORES COMPORTAMENTAIS ATUALIZADOS E LIMITADOR RÍGIDO
+    adaptive_score += min(bonus_aceleracao, 8)
+        
     if mercado_favoravel: adaptive_score += 6
     if mercado_instavel: adaptive_score = max(adaptive_score - 10, 0)
     if exaustao_detectada: adaptive_score = max(adaptive_score - 6, 0)
@@ -276,7 +281,6 @@ with col1:
     st.markdown(f"**📊 Ocorrências Mapeadas (Total):** {ocorrencias}")
     st.markdown(f"**📉 Taxa Roxa Global:** {tx_roxa:.1f}%")
     st.markdown(f"**🔥 Taxa Roxa Quente:** {tx_roxa_quente:.1f}%")
-    # ⚠️ AJUSTE 5: ADIÇÃO DOS SINAIS DE ACELERAÇÃO OPERACIONAL NA COLUNA 1
     st.markdown(f"**⚡ Aceleração Roxa:** {'⚡ SIM' if aceleracoes['roxa'] else '❌ NÃO'}")
     st.markdown(f"**🔥 Aceleração Densidade:** {'🔥 SIM' if aceleracoes['densidade'] else '❌ NÃO'}")
 with col2:
@@ -286,7 +290,6 @@ with col2:
     st.markdown(f"**🌸 Taxa Rosa Quente:** {tx_rosa_quente:.1f}%")
     st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rodadas")
     st.markdown(f"**🛡️ Exaustão Detectada:** {'💥 SIM' if exaustao_detectada else '🟢 NÃO'}")
-    # ⚠️ AJUSTE 5: ADIÇÃO DO SINAL DE ACELERAÇÃO ROSA NA COLUNA 2
     st.markdown(f"**🌸 Aceleração Rosa:** {'🌸 SIM' if aceleracoes['rosa'] else '❌ NÃO'}")
 
 if len(st.session_state.historico) > 0:
