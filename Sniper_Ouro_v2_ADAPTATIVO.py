@@ -42,7 +42,6 @@ def carregar_memoria():
         try:
             with open(ARQUIVO_MEMORIA, "r") as f: return json.load(f)
         except: pass
-    # ⚠️ GARGALO 3: ADICIONADA A ESTRUTURA DA MEMÓRIA NEGATIVA INICIAL
     return {"historico": [], "banco_padroes": [], "distancia_rosa": 0, "acertos": 0, "erros": 0, "ultimos_resultados": [], "quarentena": {}, "memoria_positiva": [], "memoria_negativa": {}}
 
 def salvar_memoria():
@@ -55,7 +54,6 @@ def salvar_memoria():
         "ultimos_resultados": st.session_state.ultimos_resultados, 
         "quarentena": st.session_state.quarentena,
         "memoria_positiva": st.session_state.memoria_positiva,
-        # Persiste a memória negativa das cicatrizes
         "memoria_negativa": st.session_state.memoria_negativa
     }
     with open(ARQUIVO_MEMORIA, "w") as f: json.dump(dados, f)
@@ -70,7 +68,6 @@ if "dados_carregados" not in st.session_state:
     st.session_state.ultimos_resultados = dados.get("ultimos_resultados", [])
     st.session_state.quarentena = dados.get("quarentena", {})
     st.session_state.memoria_positiva = dados.get("memoria_positiva", [])
-    # Carrega os estados da memória negativa
     st.session_state.memoria_negativa = dados.get("memoria_negativa", {})
     st.session_state.ultima_entrada = None
     st.session_state.ultimo_contexto = None
@@ -92,7 +89,6 @@ st.markdown(f'<div class="clock-card"><h2 style="color:#00ff66 !important;margin
 
 st.title("🎯 SNIPER OURO IA ADAPTIVE V2")
 
-# RETORNADO PARA CARGA ÚNICA ULTRAESTÁVEL (Previne loops visuais na tela)
 with st.expander("📂 RE-ABASTECER INTELIGÊNCIA CENTRAL (10.003 RODADAS)", expanded=False):
     arquivo = st.file_uploader("Suba a sua base viva completa", type=["csv","txt"])
     if arquivo is not None and len(st.session_state.historico) == 0:
@@ -161,7 +157,6 @@ if len(st.session_state.historico) >= 30:
         tx_roxa_quente = (dados_q["roxa"] / ocorrencias_q) * 100
         tx_rosa_quente = (dados_q["rosa"] / ocorrencias_q) * 100
         
-    # ⚠️ GARGALO 2: AJUSTE IDEAL DE PESOS EQUILIBRADOS (55% HISTÓRICO VS 45% QUENTE)
     peso_historico, peso_quente = 0.55, 0.45
     tx_roxa_final = (tx_roxa * peso_historico) + (tx_roxa_quente * peso_quente)
     tx_rosa_final = (tx_rosa * peso_historico) + (tx_rosa_quente * peso_quente)
@@ -176,7 +171,6 @@ if len(st.session_state.historico) >= 30:
     if contexto_chave in st.session_state.memoria_positiva:
         adaptive_score = min(adaptive_score + 8, 100)
         
-    # ⚠️ GARGALO 1: APENAS O ADAPTIVE É PENALIZADO (Radar e Expansão removidos da punição)
     penalidade_quarentena = 0
     if contexto_chave in st.session_state.quarentena:
         rodadas_restantes = st.session_state.quarentena[contexto_chave]
@@ -184,16 +178,25 @@ if len(st.session_state.historico) >= 30:
         
     adaptive_score = max(adaptive_score - penalidade_quarentena, 0)
     
-    # ⚠️ GARGALO 3: APLICAÇÃO DA CICATRIZ DA MEMÓRIA NEGATIVA GRADUAL
     peso_cicatriz = st.session_state.memoria_negativa.get(contexto_chave, 0)
     adaptive_score -= min(peso_cicatriz * 1.5, 18)
     adaptive_score = max(adaptive_score, 0)
     
-    mercado_instavel = tx_roxa_quente < 35 and radar_score < 45 and expansion_score < 45
-    mercado_favoravel = tx_roxa_quente >= 55 and radar_score >= 60
+    # ⚠️ AJUSTE 3: NOVOS PARÂMETROS DE MERCADO INSTÁVEL E FAVORÁVEL
+    mercado_instavel = tx_roxa_quente < 38 and radar_score < 50 and expansion_score < 48
+    mercado_favoravel = tx_roxa_quente >= 58 and radar_score >= 65
     
-    if mercado_favoravel: adaptive_score += 8
-    if mercado_instavel: adaptive_score -= 12
+    # ⚠️ AJUSTE 4: EXECUTAR E CALCULAR A PREVENÇÃO POR EXAUSTÃO
+    exaustao_detectada = brain.detectar_exaustao(st.session_state.historico)
+    if exaustao_detectada:
+        adaptive_score = max(adaptive_score - 10, 0)
+        radar_score = max(radar_score - 8, 0)
+    
+    # ⚠️ AJUSTE 5: NOVOS MULTIPLICADORES DE AJUSTE DE REAÇÃO COMPORTAMENTAL
+    if mercado_favoravel: adaptive_score += 6
+    if mercado_instavel: adaptive_score -= 10
+    if exaustao_detectada: adaptive_score = max(adaptive_score - 6, 0)
+    
     adaptive_score = max(min(adaptive_score, 100), 0)
     
     sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel)
@@ -201,6 +204,7 @@ if len(st.session_state.historico) >= 30:
     st.session_state.ultimo_contexto = contexto_chave
 else:
     sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, tx_rosa, tx_roxa_quente, tx_rosa_quente, padrao_atual, adaptive_score = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, 0, 0, 0, "---", 0
+    exaustao_detectada = False
 
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
@@ -223,7 +227,6 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
                 st.session_state.erros += 1
                 st.session_state.ultimos_resultados.append("LOSS")
                 
-                # ⚠️ GARGALO 3: ADICIONA PESO DE CICATRIZ NA MEMÓRIA NEGATIVA DO CONTEXTO
                 ctx_errado = st.session_state.ultimo_contexto
                 if ctx_errado not in st.session_state.memoria_negativa: st.session_state.memoria_negativa[ctx_errado] = 0
                 st.session_state.memoria_negativa[ctx_errado] += 1
@@ -243,10 +246,10 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
     st.rerun()
 
 cor_card = "red-card"
-if "ELITE" in sinal_final: cor_card = "green-card"
-elif "CHANCE" in sinal_final: cor_card = "main-card"
-elif "ROSA" in sinal_final: cor_card = "blue-card"
+if "CHANCE ELITE" in sinal_final: cor_card = "green-card"
+elif "ROSA ELITE" in sinal_final: cor_card = "blue-card"
 elif "OBSERVANDO" in sinal_final: cor_card = "gold-card"
+elif "⚠️" in sinal_final: cor_card = "red-card"
 
 st.markdown(f'<div class="{cor_card}"><h1 style="text-align:center;font-size:38px;margin:0;">{sinal_final}</h1><p style="text-align:center;margin:5px 0 0 0;font-size:18px;"><b>FORÇA DO CONSENSO IA:</b> {score_final}% | <b>PADRÃO ATUAL:</b> {padrao_atual}</p></div>', unsafe_allow_html=True)
 
@@ -264,6 +267,8 @@ with col2:
     st.markdown(f"**🌸 Taxa Rosa Global:** {tx_rosa:.1f}%")
     st.markdown(f"**🌸 Taxa Rosa Quente:** {tx_rosa_quente:.1f}%")
     st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rodadas")
+    # ⚠️ AJUSTE 6: EXIBIÇÃO NO PAINEL SE A EXAUSTÃO ESTÁ ATIVA
+    st.markdown(f"**🧨 Exaustão Detectada:** {'💥 SIM' if exaustao_detectada else '🟢 NÃO'}")
 
 if len(st.session_state.historico) > 0:
     st.markdown('<div class="main-card"><h3>📊 MONITOR DE FLUXO EM TEMPO REAL</h3></div>', unsafe_allow_html=True)
