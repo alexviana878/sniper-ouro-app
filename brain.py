@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA PREMIUM V8.2: CALIBRAGEM RÍGIDA CORE ADAPTIVE
+# ECOSSISTEMA PREMIUM V8.3: BLOQUEIO DE INFLAÇÃO DE AMOSTRAGEM
 # =========================================================
 
 def classificar_vela(valor):
@@ -36,7 +36,6 @@ def calcular_pressao_radar(historico, janela_ativa=False):
     
     return min(pressao, 100)
 
-# ⚠️ PRIORIDADE MÁXIMA: CORREÇÃO DA ESTRUTURA CUMULATIVA PARA DEGRAUS EXCLUSIVOS (elif)
 def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimos_resultados, janela_ativa=False):
     score = 0
     fase = detectar_fase(historico)
@@ -51,16 +50,17 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimo
         if reds_medio_7 >= 5: score += 10
         if reds_longo_10 >= 8: score += 15
 
-    # Degraus de teto fixo e exclusivo para evitar inflação artificial do score base
+    # Degraus de teto fixo e exclusivo para taxas
     if taxa_roxa >= 90: score += 25
     elif taxa_roxa >= 80: score += 20
     elif taxa_roxa >= 70: score += 15
 
     if taxa_rosa >= 20: score += 15
 
-    if ocorrencias >= 10: score += 10
-    if ocorrencias >= 20: score += 15
+    # ⚠️ AJUSTE DEFINITIVO: DEGRAUS EXCLUSIVOS PARA AMOSTRAGEM DE OCORRÊNCIAS (elif)
     if ocorrencias >= 30: score += 20
+    elif ocorrencias >= 20: score += 15
+    elif ocorrencias >= 10: score += 10
 
     score += pressao_radar * 0.35
 
