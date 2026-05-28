@@ -26,7 +26,7 @@ if not st.session_state.autenticado:
         else: st.error("Senha inválida.")
     st.stop()
 
-# CSS PREMIUM ATUALIZADO PARA MULTICAMADAS
+# CSS PREMIUM ATUALIZADO E OTIMIZADO
 st.markdown("""
 <style>
 .stApp { background-color: #0d1117; }
@@ -74,8 +74,7 @@ if "dados_carregados" not in st.session_state:
     st.session_state.ultimo_contexto = None
     st.session_state.dados_carregados = True
 
-# Processa decaimento da Quarentena (reduz 1 rodada a cada ciclo)
-# Processa decaimento da Quarentena (reduz 1 rodada a cada ciclo)
+# Processa decaimento da Quarentena
 if st.session_state.quarentena:
     nova_quarentena = {}
     for ctx, rodadas in st.session_state.quarentena.items():
@@ -88,37 +87,38 @@ janela_ativa = agora.minute in minutos_pagantes
 
 st.markdown(f'<div class="clock-card"><h2 style="color:#00ff66 !important;margin:0;">{agora.strftime("%H:%M:%S")}</h2><p style="margin:0;color:#00ff66 !important;">{"⚠️ JANELA ATIVA DE EXPLOSÃO" if janela_ativa else "ECOSSISTEMA MONITORANDO"}</p></div>', unsafe_allow_html=True)
 
-st.title("🎯 ECOSSISTEMA IA MULTICAMADAS V2")
+st.title("🎯 SNIPER OURO IA ADAPTIVE V2")
 
-# IMPORTAÇÃO UNIVERSAL
-st.markdown('<div class="main-card"><h3>📂 RE-ABASTECER INTELIGÊNCIA CENTRAL (10.003 RODADAS)</h3></div>', unsafe_allow_html=True)
-arquivo = st.file_uploader("Suba a sua base viva completa", type=["csv","txt"])
-
-if arquivo is not None and len(st.session_state.historico) == 0:
-    conteudo = arquivo.read().decode("utf-8")
-    linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n") if ln.strip()]
-    novo_historico, novos_padroes, dist_rosa, contador = [], [], 0, 0
-    
-    for file_line in linhas:
-        try:
-            limpo = "".join([c for c in file_line if c.isdigit() or c in [".", ","]])
-            if not limpo: continue
-            valor = float(limpo.replace(",", "."))
-            novo_historico.append(valor)
-            dist_rosa = 0 if valor >= 10 else dist_rosa + 1
-            contador += 1
-        except: pass
+# =========================================================
+# 1. ÁREA DE ABASTECIMENTO (DOBRADA PARA NÃO ATRAPALHAR)
+# =========================================================
+with st.expander("📂 RE-ABASTECER INTELIGÊNCIA CENTRAL (10.003 RODADAS)", expanded=False):
+    arquivo = st.file_uploader("Suba a sua base viva completa", type=["csv","txt"])
+    if arquivo is not None and len(st.session_state.historico) == 0:
+        conteudo = arquivo.read().decode("utf-8")
+        linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n") if ln.strip()]
+        novo_historico, novos_padroes, dist_rosa, contador = [], [], 0, 0
         
-    if len(novo_historico) >= 6:
-        for i in range(5, len(novo_historico)):
-            novos_padroes.append({"padrao": brain.gerar_padrao(novo_historico[i-5:i]), "resultado": novo_historico[i]})
+        for file_line in lines:
+            try:
+                limpo = "".join([c for c in file_line if c.isdigit() or c in [".", ","]])
+                if not limpo: continue
+                valor = float(limpo.replace(",", "."))
+                novo_historico.append(valor)
+                dist_rosa = 0 if valor >= 10 else dist_rosa + 1
+                contador += 1
+            except: pass
+            
+        if len(novo_historico) >= 6:
+            for i in range(5, len(novo_historico)):
+                novos_padroes.append({"padrao": brain.generar_padrao(novo_historico[i-5:i]), "resultado": novo_historico[i]})
 
-    st.session_state.historico = novo_historico
-    st.session_state.banco_padroes = novos_padroes
-    st.session_state.distancia_rosa = dist_rosa
-    salvar_memoria()
-    st.success(f"🔥 Sincronizado: {contador} rodadas integradas nos 3 novos cérebros!")
-    st.rerun()
+        st.session_state.historico = novo_historico
+        st.session_state.banco_padroes = novos_padroes
+        st.session_state.distancia_rosa = dist_rosa
+        salvar_memoria()
+        st.success(f"🔥 Sincronizado: {contador} rodadas integradas!")
+        st.rerun()
 
 def analisar_banco():
     memoria = {}
@@ -130,14 +130,13 @@ def analisar_banco():
         if reg["resultado"] >= 10: memoria[pad]["rosa"] += 1
     return memoria
 
-# ORQUESTRAÇÃO DOS MÚLTIPLOS CÉREBROS
+# CÁLCULOS DO ECOSSISTEMA MÚLTIPLOS CÉREBROS
 if len(st.session_state.historico) >= 30:
     padrao_atual = brain.gerar_padrao(st.session_state.historico)
     fase_macro = brain.detectar_fase(st.session_state.historico)
     radar_score = brain.calcular_pressao_radar(st.session_state.historico, janela_ativa)
     expansion_score = brain.detectar_expansao(st.session_state.historico)
     
-    # Consulta Banco Estatístico
     banco = analisar_banco()
     tx_roxa, tx_rosa, ocorrencias = 0, 0, 0
     if padrao_atual in banco:
@@ -147,71 +146,37 @@ if len(st.session_state.historico) >= 30:
         tx_rosa = (dados_p["rosa"] / ocorrencias) * 100
         
     adaptive_score = brain.calcular_score_adaptive(st.session_state.historico, tx_roxa, tx_rosa, ocorrencias, st.session_state.ultimos_resultados, janela_ativa)
-    
-    # Geração da Assinatura de Contexto Única
     contexto_chave = f"{padrao_atual}_{fase_macro}"
     bloqueado_quarentena = contexto_chave in st.session_state.quarentena
     
-    # Chamada do Motor de Consenso
     sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, bloqueado_quarentena, fase_macro)
-    
     st.session_state.ultima_entrada = sinal_final
     st.session_state.ultimo_contexto = contexto_chave
 else:
     sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, padrao_atual = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, "---"
 
-# EXIBIÇÃO EM MAQUETE DE CORES ADAPTATIVAS
-cor_card = "red-card"
-if "ELITE" in sinal_final: cor_card = "green-card"
-elif "CHANCE" in sinal_final or "ROSA" in sinal_final: cor_card = "main-card"
-elif "OBSERVANDO" in sinal_final: cor_card = "gold-card"
-elif "QUARENTENA" in sinal_final: cor_card = "blue-card"
+# =========================================================
+# 2. ÁREA OPERACIONAL ATRAZADA (CAMPO E DIRETRIZ JUNTOS)
+# =========================================================
+st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
+vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
-st.markdown(f'<div class="{cor_card}"><h2>{sinal_final}</h2><p><b>SCORE DO CONSENSO:</b> {score_final}% | <b>PADRÃO DETECTADO:</b> {padrao_atual}</p></div>', unsafe_allow_html=True)
-
-# PAINEL EXECUTIVO DOS CÉREBROS ESPECIALIZADOS
-st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
-col1, col2 = st.columns(2)
-with col1:
-    st.markdown(f"**🛡️ Cérebro Defensivo:** {fase_macro}")
-    st.markdown(f"**⚡ Radar Rosa (Micro):** {radar_score}%")
-    st.markdown(f"**📊 Ocorrências do Padrão:** {ocorrencias}")
-with col2:
-    st.markdown(f"**🌸 Cérebro de Expansão (Rosas):** {expansion_score}%")
-    st.markdown(f"**🧬 Força Base (Adaptive):** {score_final}%")
-    st.markdown(f"**📉 Taxa Roxa Real:** {tx_roxa:.1f}%")
-
-# LISTA EXCLUSIVA DE QUARENTENA VIVA
-if st.session_state.quarentena:
-    st.markdown('<div class="blue-card"><h3>❄️ CONTEXTOS EM QUARENTENA ATIVA (MEMÓRIA DE DOR)</h3></div>', unsafe_allow_html=True)
-    for ctx, rds in st.session_state.quarentena.items():
-        st.write(f"🚫 **Contexto:** `{ctx}` → Retido por mais **{rds}** rodadas.")
-
-st.markdown("<br>", unsafe_allow_html=True)
-vela = st.number_input("Digite o resultado da rodada atual:", min_value=0.0, format="%.2f", step=0.01)
-
-if st.button("PROCESSAR E ENVIAR AO ECOSSISTEMA"):
-    # APRENDIZADO COM ERROS E ACERTOS (SISTEMA DE QUARENTENA DINÂMICA)
+if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
     if st.session_state.ultimo_contexto:
         deu_green = vela >= 2
         sinal_ativo = st.session_state.ultima_entrada
         
-        # Se enviou entrada e o mercado tomou RED: Aplica Quarentena Severa
         if ("ELITE" in sinal_ativo or "CHANCE" in sinal_ativo or "ROSA" in sinal_ativo) and not deu_green:
-            st.session_state.quarentena[st.session_state.ultimo_contexto] = 20  # Fica congelado por 20 rodadas
+            st.session_state.quarentena[st.session_state.ultimo_contexto] = 20
             st.session_state.erros += 1
             st.session_state.ultimos_resultados.append("LOSS")
-        
-        # Se estava em quarentena e a próxima deu Green de forma espontânea: Recupera e perdoa
         elif "QUARENTENA" in sinal_ativo and deu_green:
             if st.session_state.ultimo_contexto in st.session_state.quarentena:
-                del st.session_state.quarentena[st.session_state.ultimo_contexto]  # Perdoado!
-        
+                del st.session_state.quarentena[st.session_state.ultimo_contexto]
         elif ("ELITE" in sinal_ativo or "CHANCE" in sinal_ativo or "ROSA" in sinal_ativo) and deu_green:
             st.session_state.acertos += 1
             st.session_state.ultimos_resultados.append("WIN")
 
-    # Atualiza logs e bases comuns
     if len(st.session_state.historico) >= 5:
         st.session_state.banco_padroes.append({"padrao": brain.gerar_padrao(st.session_state.historico), "resultado": vela})
         
@@ -220,19 +185,57 @@ if st.button("PROCESSAR E ENVIAR AO ECOSSISTEMA"):
     salvar_memoria()
     st.rerun()
 
+# CARD DE VEREDITO DE ENTRADA (COLADO LOGO ABAIXO DO BOTÃO)
+cor_card = "red-card"
+if "ELITE" in sinal_final: cor_card = "green-card"
+elif "CHANCE" in sinal_final or "ROSA" in sinal_final: cor_card = "main-card"
+elif "OBSERVANDO" in sinal_final: cor_card = "gold-card"
+elif "QUARENTENA" in sinal_final: cor_card = "blue-card"
+
+st.markdown(f'<div class="{cor_card}"><h1 style="text-align:center;font-size:38px;margin:0;">{sinal_final}</h1><p style="text-align:center;margin:5px 0 0 0;font-size:18px;"><b>FORÇA DO CONSENSO IA:</b> {score_final}% | <b>PADRÃO ATUAL:</b> {padrao_atual}</p></div>', unsafe_allow_html=True)
+
+# =========================================================
+# 3. STATUS DA BANCA MULTICÉREBRO COM PERCENTUAIS (%)
+# =========================================================
+st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown(f"**🛡️ Cérebro Defensivo (Fase Macro):** {fase_macro}")
+    st.markdown(f"**⚡ Radar Rosa (Micro Pressão):** {radar_score}%")
+    st.markdown(f"**📊 Ocorrências Mapeadas:** {ocorrencias}")
+with col2:
+    st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
+    st.markdown(f"**🧬 Força Base (Core Adaptive):** {adaptive_score}%")
+    st.markdown(f"**📉 Taxa Roxa Registrada:** {tx_roxa:.1f}%")
+
+# =========================================================
+# 4. MONITOR DE FLUXO (AS ÚLTIMAS 12/16 VELAS EXIBIDAS)
+# =========================================================
+if len(st.session_state.historico) > 0:
+    st.markdown('<div class="main-card"><h3>📊 MONITOR DE FLUXO EM TEMPO REAL</h3></div>', unsafe_allow_html=True)
+    # Seleciona as últimas 16 velas
+    ultimas_velas = st.session_state.historico[-16:]
+    velas_texto = " → ".join([f"**[{v}]**" for v in ultimas_velas])
+    st.markdown(f"<p style='font-size:18px;color:#00ff66;line-height:1.6;'>{velas_texto}</p>", unsafe_allow_html=True)
+
+# LISTA DE QUARENTENA VIVA
+if st.session_state.quarentena:
+    st.markdown('<div class="blue-card"><h3>❄️ CONTEXTOS EM QUARENTENA ATIVA (MEMÓRIA DE DOR)</h3></div>', unsafe_allow_html=True)
+    for ctx, rds in st.session_state.quarentena.items():
+        st.write(f"🚫 **Frio:** `{ctx}` → Congelado por mais **{rds}** rodadas.")
+
 # PERFORMANCE HISTÓRICA DO PROJETO
 total = st.session_state.acertos + st.session_state.erros
 assertividade = (st.session_state.acertos / total) * 100 if total > 0 else 0
-st.markdown('<div class="gold-card"><h3 style="text-align:center;">👑 PERFORMANCE GLOBAL ADAPTIVE MULTICAMADAS</h3></div>', unsafe_allow_html=True)
+st.markdown('<div class="gold-card"><h3 style="text-align:center;">👑 PERFORMANCE GLOBAL MULTICAMADAS</h3></div>', unsafe_allow_html=True)
 c1, c2, c3 = st.columns(3)
 with c1: st.metric("✅ GREEN ACERTOS", st.session_state.acertos)
-with c2: st.metric("❌ RED ERROS COLETADOS", st.session_state.erros)
+with c2: st.metric("❌ REDS COLETADOS", st.session_state.erros)
 with c3: st.metric("📊 ASSERTIVIDADE LÍQUIDA", f"{assertividade:.1f}%")
 
-if len(st.session_state.historico) > 0:
-    st.markdown(f"<p style='color:#999;'><b>Total Registrado na Memória Persistente: {len(st.session_state.historico)} rodadas.</b></p>", unsafe_allow_html=True)
+st.markdown(f"<p style='color:#666;text-align:center;font-size:12px;'>Base Total Ativa: {len(st.session_state.historico)} rodadas.</p>", unsafe_allow_html=True)
 
-if st.button("RESETAR MÓDULOS E LIMPAR BANCO"):
+if st.button("RESETAR ECOSSISTEMA TOTAL"):
     if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
     st.session_state.historico, st.session_state.banco_padroes, st.session_state.distancia_rosa, st.session_state.acertos, st.session_state.erros, st.session_state.ultimos_resultados, st.session_state.quarentena = [], [], 0, 0, 0, [], {}
     salvar_memoria()
