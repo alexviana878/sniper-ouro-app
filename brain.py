@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA PREMIUM V6: FILTROS DE EXAUSTÃO E CONCURSO ELITE
+# ECOSSISTEMA PREMIUM V7: ACELERAÇÃO E TRANSIÇÃO DE ESTADO
 # =========================================================
 
 def classificar_vela(valor):
@@ -103,4 +103,61 @@ def detectar_expansao(historico):
     score += compressao * 0.5
     return min(int(score), 100)
 
-# ⚠️ AJUSTE 2: FUNÇÃO DETECTAR EXA
+def detectar_exaustao(historico):
+    if len(historico) < 5:
+        return False
+    
+    bytes5 = historico[-5:]
+    media5 = sum(bytes5) / len(bytes5)
+    muitos_baixos = len([v for v in bytes5 if v <= 1.20])
+    
+    if media5 > 4.5: return True
+    if muitos_baixos >= 4: return True
+    if len([v for v in bytes5 if v >= 10]) >= 1 and media5 > 3: return True
+    
+    return False
+
+# ⚠️ NOVO BLOCO: DETECTOR ESTATÍSTICO DE ACELERAÇÃO RECENTE
+def detectar_aceleracao(historico):
+    if len(historico) < 8:
+        return {"roxa": False, "rosa": False, "densidade": False}
+
+    ultimas8 = historico[-8:]
+    ultimas4 = historico[-4:]
+
+    media8 = sum(ultimas8) / 8
+    media4 = sum(ultimas4) / 4
+
+    roxas8 = len([v for v in ultimas8 if v >= 2])
+    roxas4 = len([v for v in ultimas4 if v >= 2])
+    rosas4 = len([v for v in ultimas4 if v >= 10])
+
+    aceleracao_roxa = (roxas4 >= 2 and media4 > media8)
+    aceleracao_rosa = (rosas4 >= 1 and media4 >= 4)
+    aceleracao_densidade = (media8 <= 1.7 and media4 >= 2.4)
+
+    return {
+        "roxa": aceleracao_roxa,
+        "rosa": aceleracao_rosa,
+        "densidade": aceleracao_densidade
+    }
+
+def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel):
+    score_final = (adaptive_score * 0.45) + (radar_score * 0.30) + (expansion_score * 0.25)
+
+    if mercado_instavel:
+        return "⚠️ MERCADO INSTÁVEL", int(score_final)
+
+    if tx_roxa_quente < 38 and radar_score < 50:
+        return "⚠️ PRESSÃO FRACA", int(score_final)
+
+    if expansion_score >= 88 and adaptive_score >= 78 and tx_roxa_quente >= 58:
+        return "🌸 ROSA ELITE", int(score_final)
+
+    if adaptive_score >= 72 and radar_score >= 62 and tx_roxa_quente >= 52:
+        return "🟢 CHANCE ELITE", int(score_final)
+
+    if adaptive_score >= 58:
+        return "🟡 OBSERVANDO", int(score_final)
+
+    return "🔴 AGUARDAR", int(score_final)
