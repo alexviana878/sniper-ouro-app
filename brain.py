@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA PREMIUM V8.1: REFINAMENTOS FINOS DE ACELERAÇÃO
+# ECOSSISTEMA PREMIUM V8.2: CALIBRAGEM RÍGIDA CORE ADAPTIVE
 # =========================================================
 
 def classificar_vela(valor):
@@ -36,6 +36,7 @@ def calcular_pressao_radar(historico, janela_ativa=False):
     
     return min(pressao, 100)
 
+# ⚠️ PRIORIDADE MÁXIMA: CORREÇÃO DA ESTRUTURA CUMULATIVA PARA DEGRAUS EXCLUSIVOS (elif)
 def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimos_resultados, janela_ativa=False):
     score = 0
     fase = detectar_fase(historico)
@@ -50,9 +51,11 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimo
         if reds_medio_7 >= 5: score += 10
         if reds_longo_10 >= 8: score += 15
 
-    if taxa_roxa >= 70: score += 15
-    if taxa_roxa >= 80: score += 20
+    # Degraus de teto fixo e exclusivo para evitar inflação artificial do score base
     if taxa_roxa >= 90: score += 25
+    elif taxa_roxa >= 80: score += 20
+    elif taxa_roxa >= 70: score += 15
+
     if taxa_rosa >= 20: score += 15
 
     if ocorrencias >= 10: score += 10
@@ -120,7 +123,6 @@ def detectar_exaustao(historico):
     
     return False
 
-# ⚠️ AJUSTE 1: INTEGRADO ROXAS8 PARA REDUZIR ACELERAÇÕES FALSAS
 def detectar_aceleracao(historico):
     if len(historico) < 8:
         return {"roxa": False, "rosa": False, "densidade": False}
