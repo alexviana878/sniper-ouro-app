@@ -1,3 +1,8 @@
+# brain.py
+# =========================================================
+# ECOSSISTEMA MULTICAMADAS - SNIPER OURO IA ADAPTIVE 2026
+# =========================================================
+
 def classificar_vela(valor):
     if valor < 1.20: return "X"
     elif valor < 2.00: return "B"
@@ -53,3 +58,55 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimo
         if erros >= 2: score -= 12
         
     return min(max(int(score), 0), 100)
+
+# =========================================================
+# NOVA CAMADA: 1. EXPANSION BRAIN (CAÇADOR DE VELAS ROSAS)
+# =========================================================
+def calcular_distancia_rosa(historico):
+    for i in range(len(historico) - 1, -1, -1):
+        if historico[i] >= 10:
+            return len(historico) - i
+    return 999
+
+def calcular_compressao(historico):
+    janela = historico[-15:] if len(historico) >= 15 else historico
+    reds = sum(1 for x in janela if x < 2)
+    medios = sum(1 for x in janela if 2 <= x < 5)
+    altos = sum(1 for x in janela if x >= 10)
+    
+    score = 0
+    if reds >= 8: score += 30
+    if medios <= 2: score += 20
+    if altos == 0: score += 40
+    return min(score, 100)
+
+def detectar_expansao(historico):
+    distancia = calcular_distancia_rosa(historico)
+    compressao = calcular_compressao(historico)
+    
+    score = 0
+    if distancia >= 15: score += 30
+    if distancia >= 25: score += 50
+    score += compressao * 0.5
+    return min(int(score), 100)
+
+# =========================================================
+# NOVA CAMADA: 2. CONSENSUS ENGINE (MOTOR DE CONSENSO)
+# =========================================================
+def calcular_consenso(adaptive_score, radar_score, expansion_score, bloqueado, fase_macro):
+    if bloqueado:
+        return "🚫 QUARENTENA", 0
+        
+    # Peso ponderado dos 3 cérebros ativos
+    final = (adaptive_score * 0.4) + (radar_score * 0.2) + (expansion_score * 0.4)
+    
+    if fase_macro == "DEFENSIVA":
+        final -= 20
+        
+    final = max(0, min(100, int(final)))
+    
+    if final >= 88: return "🔥 ENTRADA ELITE", final
+    if final >= 75: return "🟢 BOA CHANCE AGORA", final
+    if expansion_score >= 70 and radar_score >= 60: return "🌸 BUSCAR ROSA", final
+    if final >= 50: return "🟡 OBSERVANDO", final
+    return "🔴 AGUARDAR", final
