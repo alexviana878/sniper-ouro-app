@@ -71,7 +71,6 @@ if "dados_carregados" not in st.session_state:
     st.session_state.ultimo_contexto = None
     st.session_state.dados_carregados = True
 
-# ⚠️ PASSO 4: ENVELHECIMENTO DINÂMICO ACELERADO DA QUARENTENA
 if st.session_state.quarentena:
     nova_quarentena = {}
     for ctx, rodadas in st.session_state.quarentena.items():
@@ -88,30 +87,42 @@ st.markdown(f'<div class="clock-card"><h2 style="color:#00ff66 !important;margin
 
 st.title("🎯 SNIPER OURO IA ADAPTIVE V2")
 
-with st.expander("📂 RE-ABASTECER INTELIGÊNCIA CENTRAL (10.003 RODADAS)", expanded=False):
-    arquivo = st.file_uploader("Suba a sua base viva completa", type=["csv","txt"])
-    if arquivo is not None and len(st.session_state.historico) == 0:
+# ⚠️ ENGENHARIA DE ACÚMULO MODIFICADA: AGORA INTEGRA NOVAS VELAS SEM APAGAR O HISTÓRICO ANTERIOR
+with st.expander("📂 INJETAR / RE-ABASTECER INTELIGÊNCIA CENTRAL", expanded=False):
+    arquivo = st.file_uploader("Suba um arquivo de velas (Acumula na base atual)", type=["csv","txt"])
+    if arquivo is not None:
         conteudo = arquivo.read().decode("utf-8")
         linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n") if ln.strip()]
-        novo_historico, novos_padroes, dist_rosa, contador = [], [], 0, 0
+        novas_velas = []
+        contador = 0
         for file_line in linhas:
             try:
                 limpo = "".join([c for c in file_line if c.isdigit() or c in [".", ","]])
                 if not limpo: continue
                 valor = float(limpo.replace(",", "."))
-                novo_historico.append(valor)
-                dist_rosa = 0 if valor >= 10 else dist_rosa + 1
+                novas_velas.append(valor)
                 contador += 1
             except: pass
-        if len(novo_historico) >= 6:
-            for i in range(5, len(novo_historico)):
-                novos_padroes.append({"padrao": brain.gerar_padrao(novo_historico[i-5:i]), "resultado": novo_historico[i]})
-        st.session_state.historico = novo_historico
-        st.session_state.banco_padroes = novos_padroes
-        st.session_state.distancia_rosa = dist_rosa
-        salvar_memoria()
-        st.success(f"🔥 Sincronizado: {contador} rodadas integradas!")
-        st.rerun()
+            
+        if novas_velas:
+            # Em vez de zerar, nós adicionamos (somamos) ao histórico existente
+            st.session_state.historico.extend(novas_velas)
+            
+            # Recalcula a distância e remapeia os padrões baseados no novo tamanho da lista
+            st.session_state.distancia_rosa = 0
+            for v in st.session_state.historico:
+                st.session_state.distancia_rosa = 0 if v >= 10 else st.session_state.distancia_rosa + 1
+                
+            # Recria o banco de padrões integrado
+            novos_padroes = []
+            if len(st.session_state.historico) >= 6:
+                for i in range(5, len(st.session_state.historico)):
+                    novos_padroes.append({"padrao": brain.gerar_padrao(st.session_state.historico[i-5:i]), "resultado": st.session_state.historico[i]})
+            st.session_state.banco_padroes = novos_padroes
+            
+            salvar_memoria()
+            st.success(f"🔥 Sucesso: Mais {contador} rodadas integradas e somadas ao ecossistema!")
+            st.rerun()
 
 def analisar_banco():
     memoria = {}
@@ -131,7 +142,6 @@ if len(st.session_state.historico) >= 30:
     
     banco = analisar_banco()
     
-    # ⚠️ PASSO 1: IMPLEMENTAÇÃO DA MEMÓRIA QUENTE (ÚLTIMAS 120 VELAS)
     historico_quente = st.session_state.historico[-120:]
     banco_quente = {}
     if len(historico_quente) >= 6:
@@ -143,7 +153,6 @@ if len(st.session_state.historico) >= 30:
                 if historico_quente[i] >= 2: banco_quente[pad]["roxa"] += 1
                 if historico_quente[i] >= 10: banco_quente[pad]["rosa"] += 1
 
-    # ⚠️ PASSO 2: DIFERENCIAÇÃO DE TAXAS HISTÓRICAS VS QUENTES
     tx_roxa = tx_rosa = tx_roxa_quente = tx_rosa_quente = ocorrencias = ocorrencias_q = 0
     
     if padrao_atual in banco:
@@ -158,12 +167,10 @@ if len(st.session_state.historico) >= 30:
         tx_roxa_quente = (dados_q["roxa"] / ocorrencias_q) * 100
         tx_rosa_quente = (dados_q["rosa"] / ocorrencias_q) * 100
         
-    # ⚠️ PASSO 3: CONSENSO VIVO (PESO PRESENTE 65% VS HISTÓRICO 35%)
     peso_historico, peso_quente = 0.35, 0.65
     tx_roxa_final = (tx_roxa * peso_historico) + (tx_roxa_quente * peso_quente)
     tx_rosa_final = (tx_rosa * peso_historico) + (tx_rosa_quente * peso_quente)
     
-    # Executa o cálculo adaptativo alimentado pelo consenso das taxas refinadas
     adaptive_score = brain.calcular_score_adaptive(st.session_state.historico, tx_roxa_final, tx_rosa_final, ocorrencias, st.session_state.ultimos_resultados, janela_ativa)
     
     if st.session_state.distancia_rosa <= 5: faixa_rosa = "CURTA"
@@ -183,11 +190,9 @@ if len(st.session_state.historico) >= 30:
     radar_score = max(radar_score - int(penalidade_quarentena * 0.3), 0)
     expansion_score = max(expansion_score - int(penalidade_quarentena * 0.5), 0)
     
-    # ⚠️ PASSO 5: DETECTOR DE HUMOR EM TEMPO REAL
     mercado_instavel = tx_roxa_quente < 35 and radar_score < 45 and expansion_score < 45
     mercado_favoravel = tx_roxa_quente >= 55 and radar_score >= 60
     
-    # ⚠️ PASSO 6: BÔNUS OU ÔNUS BASEADO NO HUMOR DO MOMENTO
     if mercado_favoravel: adaptive_score += 8
     if mercado_instavel: adaptive_score -= 12
     adaptive_score = max(min(adaptive_score, 100), 0)
@@ -248,13 +253,11 @@ with col1:
     st.markdown(f"**⚡ Radar Rosa (Micro Pressão):** {radar_score}%")
     st.markdown(f"**📊 Ocorrências Mapeadas (Total):** {ocorrencias}")
     st.markdown(f"**📉 Taxa Roxa Global:** {tx_roxa:.1f}%")
-    # ⚠️ PASSO 7: EXIBIÇÃO DA TAXA ROXA QUENTE OPERACIONAL
     st.markdown(f"**🔥 Taxa Roxa Quente:** {tx_roxa_quente:.1f}%")
 with col2:
     st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
     st.markdown(f"**🧬 Força Base (Core Adaptive):** {adaptive_score}%")
     st.markdown(f"**🌸 Taxa Rosa Global:** {tx_rosa:.1f}%")
-    # ⚠️ PASSO 7: EXIBIÇÃO DA TAXA ROSA QUENTE OPERACIONAL
     st.markdown(f"**🌸 Taxa Rosa Quente:** {tx_rosa_quente:.1f}%")
     st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rodadas")
 
