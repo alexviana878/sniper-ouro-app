@@ -75,7 +75,8 @@ if "dados_carregados" not in st.session_state:
     st.session_state.dados_carregados = True
 
 # Processa decaimento da Quarentena (reduz 1 rodada a cada ciclo)
-if st.items():
+# Processa decaimento da Quarentena (reduz 1 rodada a cada ciclo)
+if st.session_state.quarentena:
     nova_quarentena = {}
     for ctx, rodadas in st.session_state.quarentena.items():
         if rodadas > 1: nova_quarentena[ctx] = rodadas - 1
