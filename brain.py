@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA MULTICAMADAS - SNIPER OURO IA ADAPTIVE 2026
+# ECOSSISTEMA REFINADO: PESOS DINÂMICOS E MEMÓRIA POSITIVA
 # =========================================================
 
 def classificar_vela(valor):
@@ -60,7 +60,7 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimo
     return min(max(int(score), 0), 100)
 
 # =========================================================
-# NOVA CAMADA: 1. EXPANSION BRAIN (CAÇADOR DE VELAS ROSAS)
+# PASSO 5: AJUSTAR O CÉREBRO ROSA (CRESCIMENTO PROGRESSIVO)
 # =========================================================
 def calcular_distancia_rosa(historico):
     for i in range(len(historico) - 1, -1, -1):
@@ -85,35 +85,46 @@ def detectar_expansao(historico):
     compressao = calcular_compressao(historico)
     
     score = 0
-    if distancia >= 15: score += 30
-    if distancia >= 25: score += 50
+    # Modificação Passo 5: Despertar progressivo e natural da IA
+    if distancia >= 10: score += 20
+    if distancia >= 15: score += 35
+    if distancia >= 20: score += 50
+    
     score += compressao * 0.5
     return min(int(score), 100)
 
 # =========================================================
-# NOVA CAMADA: 2. CONSENSUS ENGINE (MOTOR DE CONSENSO)
-# =========================================================
-# =========================================================
-# NOVA CAMADA: 2. CONSENSUS ENGINE (MOTOR DE CONSENSO CALIBRADO)
+# PASSO 1 E 2: MOTOR DE CONSENSO COM PESOS DINÂMICOS
 # =========================================================
 def calcular_consenso(adaptive_score, radar_score, expansion_score, bloqueado, fase_macro):
     if bloqueado:
         return "🚫 QUARENTENA", 0
         
-    # SE DETECTAR A ACUMULAÇÃO DE 100% QUE O ALEX COLOCOU EM PRÁTICA: TRAVA NO ROSA
-    if expansion_score >= 80 or (radar_score >= 80 and expansion_score >= 60):
-        return "🌸 BUSCAR ROSA (EXPLOSÃO)", int((radar_score + expansion_score) / 2)
+    # SINAL EXCLUSIVO PASSO 2: ROSA ELITE (Antes de calcular o final comum)
+    if expansion_score >= 85 and adaptive_score >= 70 and radar_score >= 70:
+        final_rosa = (adaptive_score * 0.35) + (radar_score * 0.25) + (expansion_score * 0.40)
+        return "🌸 POSSÍVEL ROSA ELITE", min(int(final_rosa), 100)
+
+    # REFINAMENTO PASSO 1: Configuração padrão focada em Estabilidade e 2x
+    peso_adaptive = 0.50
+    peso_radar = 0.20
+    peso_expansion = 0.30
+    
+    # Se o cérebro rosa acordar, ele ganha dominância nos pesos dinamicamente
+    if expansion_score >= 70:
+        peso_adaptive = 0.35
+        peso_radar = 0.25
+        peso_expansion = 0.40
         
-    # Peso ponderado rigoroso para evitar falsos sinais verdes
-    final = (adaptive_score * 0.5) + (radar_score * 0.2) + (expansion_score * 0.3)
+    final = (adaptive_score * peso_adaptive) + (radar_score * peso_radar) + (expansion_score * peso_expansion)
     
     if fase_macro == "DEFENSIVA":
-        final -= 25  # Punição maior em ciclos ruins
+        final -= 20
         
     final = max(0, min(100, int(final)))
     
-    # Subimos a régua das entradas comuns para blindar contra os erros
-    if final >= 92: return "🔥 ENTRADA ELITE", final
-    if final >= 82: return "🟢 BOA CHANCE AGORA", final
-    if final >= 60: return "🟡 OBSERVANDO", final
+    # Retorno das diretrizes operacionais base 2x
+    if final >= 92: return "🔥 ENTRADA ELITE (2x)", final
+    if final >= 82: return "🟢 BOA CHANCE AGORA (2x)", final
+    if final >= 50: return "🟡 OBSERVANDO", final
     return "🔴 AGUARDAR", final
