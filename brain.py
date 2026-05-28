@@ -93,20 +93,27 @@ def detectar_expansao(historico):
 # =========================================================
 # NOVA CAMADA: 2. CONSENSUS ENGINE (MOTOR DE CONSENSO)
 # =========================================================
+# =========================================================
+# NOVA CAMADA: 2. CONSENSUS ENGINE (MOTOR DE CONSENSO CALIBRADO)
+# =========================================================
 def calcular_consenso(adaptive_score, radar_score, expansion_score, bloqueado, fase_macro):
     if bloqueado:
         return "🚫 QUARENTENA", 0
         
-    # Peso ponderado dos 3 cérebros ativos
-    final = (adaptive_score * 0.4) + (radar_score * 0.2) + (expansion_score * 0.4)
+    # SE DETECTAR A ACUMULAÇÃO DE 100% QUE O ALEX COLOCOU EM PRÁTICA: TRAVA NO ROSA
+    if expansion_score >= 80 or (radar_score >= 80 and expansion_score >= 60):
+        return "🌸 BUSCAR ROSA (EXPLOSÃO)", int((radar_score + expansion_score) / 2)
+        
+    # Peso ponderado rigoroso para evitar falsos sinais verdes
+    final = (adaptive_score * 0.5) + (radar_score * 0.2) + (expansion_score * 0.3)
     
     if fase_macro == "DEFENSIVA":
-        final -= 20
+        final -= 25  # Punição maior em ciclos ruins
         
     final = max(0, min(100, int(final)))
     
-    if final >= 88: return "🔥 ENTRADA ELITE", final
-    if final >= 75: return "🟢 BOA CHANCE AGORA", final
-    if expansion_score >= 70 and radar_score >= 60: return "🌸 BUSCAR ROSA", final
-    if final >= 50: return "🟡 OBSERVANDO", final
+    # Subimos a régua das entradas comuns para blindar contra os erros
+    if final >= 92: return "🔥 ENTRADA ELITE", final
+    if final >= 82: return "🟢 BOA CHANCE AGORA", final
+    if final >= 60: return "🟡 OBSERVANDO", final
     return "🔴 AGUARDAR", final
