@@ -130,6 +130,9 @@ if len(st.session_state.historico) >= 30:
     radar_score = brain.calcular_pressao_radar(st.session_state.historico, janela_ativa)
     expansion_score = brain.detectar_expansao(st.session_state.historico)
     
+    # ⚠️ AJUSTE 2: DETECÇÃO DE ACELERAÇÕES E MUDANÇA DE RITMO DO FLUXO
+    aceleracoes = brain.detectar_aceleracao(st.session_state.historico)
+    
     banco = analisar_banco()
     
     historico_quente = st.session_state.historico[-120:]
@@ -182,22 +185,33 @@ if len(st.session_state.historico) >= 30:
     adaptive_score -= min(peso_cicatriz * 1.5, 18)
     adaptive_score = max(adaptive_score, 0)
     
-    # ⚠️ AJUSTE 3: NOVOS PARÂMETROS DE MERCADO INSTÁVEL E FAVORÁVEL
+    # ⚠️ AJUSTE 3: NOVOS ACORDOS DE AMBIENTES CRÍTICOS E FAVORÁVEIS
     mercado_instavel = tx_roxa_quente < 38 and radar_score < 50 and expansion_score < 48
     mercado_favoravel = tx_roxa_quente >= 58 and radar_score >= 65
     
-    # ⚠️ AJUSTE 4: EXECUTAR E CALCULAR A PREVENÇÃO POR EXAUSTÃO
+    # ⚠️ AJUSTE 4: DETECTOR DE EXAUSTÃO ATENUANDO SCORE ANTES DOS BÔNUS
     exaustao_detectada = brain.detectar_exaustao(st.session_state.historico)
     if exaustao_detectada:
         adaptive_score = max(adaptive_score - 10, 0)
         radar_score = max(radar_score - 8, 0)
-    
-    # ⚠️ AJUSTE 5: NOVOS MULTIPLICADORES DE AJUSTE DE REAÇÃO COMPORTAMENTAL
+        
+    # ⚠️ AJUSTE 3: INJEÇÃO DOS BÔNUS CONTEXTUAIS DE TRANSIÇÃO E ACELERAÇÃO
+    if aceleracoes["roxa"]:
+        adaptive_score += 4
+        radar_score += 5
+    if aceleracoes["rosa"]:
+        expansion_score += 8
+    if aceleracoes["densidade"]:
+        adaptive_score += 6
+        
+    # ⚠️ AJUSTE 5: MULTIPLICADORES COMPORTAMENTAIS ATUALIZADOS E LIMITADOR RÍGIDO
     if mercado_favoravel: adaptive_score += 6
-    if mercado_instavel: adaptive_score -= 10
+    if mercado_instavel: adaptive_score = max(adaptive_score - 10, 0)
     if exaustao_detectada: adaptive_score = max(adaptive_score - 6, 0)
     
     adaptive_score = max(min(adaptive_score, 100), 0)
+    radar_score = max(min(radar_score, 100), 0)
+    expansion_score = max(min(expansion_score, 100), 0)
     
     sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel)
     st.session_state.ultima_entrada = sinal_final
@@ -205,6 +219,7 @@ if len(st.session_state.historico) >= 30:
 else:
     sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, tx_rosa, tx_roxa_quente, tx_rosa_quente, padrao_atual, adaptive_score = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, 0, 0, 0, "---", 0
     exaustao_detectada = False
+    aceleracoes = {"roxa": False, "rosa": False, "densidade": False}
 
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
@@ -261,14 +276,18 @@ with col1:
     st.markdown(f"**📊 Ocorrências Mapeadas (Total):** {ocorrencias}")
     st.markdown(f"**📉 Taxa Roxa Global:** {tx_roxa:.1f}%")
     st.markdown(f"**🔥 Taxa Roxa Quente:** {tx_roxa_quente:.1f}%")
+    # ⚠️ AJUSTE 5: ADIÇÃO DOS SINAIS DE ACELERAÇÃO OPERACIONAL NA COLUNA 1
+    st.markdown(f"**⚡ Aceleração Roxa:** {'⚡ SIM' if aceleracoes['roxa'] else '❌ NÃO'}")
+    st.markdown(f"**🔥 Aceleração Densidade:** {'🔥 SIM' if aceleracoes['densidade'] else '❌ NÃO'}")
 with col2:
     st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
     st.markdown(f"**🧬 Força Base (Core Adaptive):** {adaptive_score}%")
     st.markdown(f"**🌸 Taxa Rosa Global:** {tx_rosa:.1f}%")
     st.markdown(f"**🌸 Taxa Rosa Quente:** {tx_rosa_quente:.1f}%")
     st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rodadas")
-    # ⚠️ AJUSTE 6: EXIBIÇÃO NO PAINEL SE A EXAUSTÃO ESTÁ ATIVA
-    st.markdown(f"**🧨 Exaustão Detectada:** {'💥 SIM' if exaustao_detectada else '🟢 NÃO'}")
+    st.markdown(f"**🛡️ Exaustão Detectada:** {'💥 SIM' if exaustao_detectada else '🟢 NÃO'}")
+    # ⚠️ AJUSTE 5: ADIÇÃO DO SINAL DE ACELERAÇÃO ROSA NA COLUNA 2
+    st.markdown(f"**🌸 Aceleração Rosa:** {'🌸 SIM' if aceleracoes['rosa'] else '❌ NÃO'}")
 
 if len(st.session_state.historico) > 0:
     st.markdown('<div class="main-card"><h3>📊 MONITOR DE FLUXO EM TEMPO REAL</h3></div>', unsafe_allow_html=True)
