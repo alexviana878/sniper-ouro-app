@@ -136,18 +136,27 @@ if len(st.session_state.historico) >= 30:
         
     adaptive_score = brain.calcular_score_adaptive(st.session_state.historico, tx_roxa, tx_rosa, ocorrencias, st.session_state.ultimos_resultados, janela_ativa)
     
-    contexto_chave = f"{padrao_atual}_{fase_macro}"
+    # ⚠️ PRIORIDADE 1: CONTEXTO COMPOSTO POR FAIXAS DE DISTÂNCIA
+    if st.session_state.distancia_rosa <= 5: faixa_rosa = "CURTA"
+    elif st.session_state.distancia_rosa <= 12: faixa_rosa = "MEDIA"
+    else: faixa_rosa = "LONGA"
+    
+    contexto_chave = f"{padrao_atual}_{fase_macro}_{faixa_rosa}"
+    
     if contexto_chave in st.session_state.memoria_positiva:
         adaptive_score = min(adaptive_score + 8, 100)
         
+    # ⚠️ PRIORIDADE 3: QUARENTENA MULTICEREBRAL GRADUAL (Afeta múltiplos cérebros)
     penalidade_quarentena = 0
     if contexto_chave in st.session_state.quarentena:
         rodadas_restantes = st.session_state.quarentena[contexto_chave]
         penalidade_quarentena = min(rodadas_restantes * 2, 30)
         
     adaptive_score = max(adaptive_score - penalidade_quarentena, 0)
+    radar_score = max(radar_score - int(penalidade_quarentena * 0.3), 0)
+    expansion_score = max(expansion_score - int(penalidade_quarentena * 0.5), 0)
     
-    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro)
+    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa)
     st.session_state.ultima_entrada = sinal_final
     st.session_state.ultimo_contexto = contexto_chave
 else:
@@ -181,6 +190,10 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
                     
                 st.session_state.acertos += 1
                 st.session_state.ultimos_resultados.append("WIN")
+                
+        # ⚠️ PRIORIDADE 2: HISTÓRICO RECENTE MÓVEL (Corta os resultados mais velhos que 50)
+        if len(st.session_state.ultimos_resultados) > 50:
+            st.session_state.ultimos_resultados.pop(0)
 
     if len(st.session_state.historico) >= 5:
         st.session_state.banco_padroes.append({"padrao": brain.gerar_padrao(st.session_state.historico), "resultado": vela})
@@ -199,7 +212,6 @@ elif "OBSERVANDO" in sinal_final: cor_card = "gold-card"
 
 st.markdown(f'<div class="{cor_card}"><h1 style="text-align:center;font-size:38px;margin:0;">{sinal_final}</h1><p style="text-align:center;margin:5px 0 0 0;font-size:18px;"><b>FORÇA DO CONSENSO IA:</b> {score_final}% | <b>PADRÃO ATUAL:</b> {padrao_atual}</p></div>', unsafe_allow_html=True)
 
-# BLOCK REORGANIZADO: EXIBE AS TAXAS ROXA, ROSA E A DISTÂNCIA EM DUAS COLUNAS EQUILIBRADAS
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1:
@@ -222,13 +234,13 @@ if len(st.session_state.historico) > 0:
 if st.session_state.memoria_positiva:
     with st.expander(f"🌟 MEMÓRIA POSITIVA ATIVA ({len(st.session_state.memoria_positiva)}/300 PADRÕES ATIVOS)", expanded=False):
         for ctx in st.session_state.memoria_positiva[-10:]:
-            st.markdown(f"💎 **Contexto Consolidado:** `{ctx}` (+8% Score bônus)")
+            st.markdown(f"💎 **Contexto Composto:** `{ctx}` (+8% Score bônus)")
 
 if st.session_state.quarentena:
-    st.markdown('<div class="blue-card"><h3>❄️ CONTEXTOS EM QUARENTENA ATIVA (PENALIDADE GRADUAL)</h3></div>', unsafe_allow_html=True)
+    st.markdown('<div class="blue-card"><h3>❄️ CONTEXTOS EM QUARENTENA ATIVA (PENALIDADE MULTICÉREBRO)</h3></div>', unsafe_allow_html=True)
     for ctx, rds in st.session_state.quarentena.items():
         peso_penalidade = min(rds * 2, 30)
-        st.write(f"🚫 **Geladeira:** `{ctx}` → Restam **{rds}** rodadas (Subtraindo -{peso_penalidade}% do Core Adaptive)")
+        st.write(f"🚫 **Geladeira:** `{ctx}` → Restam **{rds}** rodadas (Penalidade Ativa: -{peso_penalidade}%)")
 
 total = st.session_state.acertos + st.session_state.erros
 assertividade = (st.session_state.acertos / total) * 100 if total > 0 else 0
