@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA PREMIUM V2: ANÁLISE CRÍTICA E REFINAMENTO FINO
+# ECOSSISTEMA PREMIUM V3: CONTEXTO COMPOSTO E AMBIENTE RUIM
 # =========================================================
 
 def classificar_vela(valor):
@@ -41,11 +41,10 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimo
     fase = detectar_fase(historico)
     pressao_radar = calcular_pressao_radar(historico, janela_ativa)
     
-    # ⚠️ AJUSTE 4: CONTEXTO EXPANDIDO VOLUMÉTRICO (Análise dinâmica sem travar a string)
     if len(historico) >= 10:
-        reds_curto_5 = sum(1 for x in historico[-5:] if x < 2)  # Reversão Rápida
-        reds_medio_7 = sum(1 for x in historico[-7:] if x < 2)  # Tendência Defensiva
-        reds_longo_10 = sum(1 for x in historico[-10:] if x < 2) # Macro Ciclo
+        reds_curto_5 = sum(1 for x in historico[-5:] if x < 2)
+        reds_medio_7 = sum(1 for x in historico[-7:] if x < 2)
+        reds_longo_10 = sum(1 for x in historico[-10:] if x < 2)
         
         if reds_curto_5 >= 4: score += 10
         if reds_medio_7 >= 5: score += 10
@@ -64,13 +63,12 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimo
 
     if fase == "DEFENSIVA": score -= 15
     
-    # ⚠️ AJUSTE 5: SCORE DE CONFIANÇA HISTÓRICA (Janela móvel de assertividade real)
     if ultimos_resultados:
+        # Puxa apenas a janela móvel limitada (recente) para avaliar consistência
         janela_performance = ultimos_resultados[-10:]
         wins = janela_performance.count("WIN")
         consistencia = (wins / len(janela_performance)) * 100
         
-        # Injeta bônus ou punição baseado na consistência real das últimas operações
         if consistencia >= 70: score += 15
         elif consistencia <= 30: score -= 20
         
@@ -106,8 +104,11 @@ def detectar_expansao(historico):
     score += compressao * 0.5
     return min(int(score), 100)
 
-def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro):
-    # O cálculo de quarentena gradual foi movido para o orquestrador principal para maior dinamismo
+def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa):
+    # ⚠️ PRIORIDADE 5: DETECTAR AMBIENTE RUIM (Bloqueio preventivo total)
+    if tx_roxa < 35 and radar_score < 40 and expansion_score < 40:
+        return "🔴 AMBIENTE INSTÁVEL (🚫)", 0
+
     if expansion_score >= 85 and adaptive_score >= 70 and radar_score >= 70:
         final_rosa = (adaptive_score * 0.35) + (radar_score * 0.25) + (expansion_score * 0.40)
         return "🌸 POSSÍVEL ROSA ELITE", min(int(final_rosa), 100)
