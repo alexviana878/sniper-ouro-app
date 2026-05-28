@@ -71,10 +71,13 @@ if "dados_carregados" not in st.session_state:
     st.session_state.ultimo_contexto = None
     st.session_state.dados_carregados = True
 
+# ⚠️ PASSO 4: ENVELHECIMENTO DINÂMICO ACELERADO DA QUARENTENA
 if st.session_state.quarentena:
     nova_quarentena = {}
     for ctx, rodadas in st.session_state.quarentena.items():
-        if rodadas > 1: nova_quarentena[ctx] = rodadas - 1
+        decaimento = 3 if "ROSA" in ctx else 2
+        nova = rodadas - decaimento
+        if nova > 0: nova_quarentena[ctx] = nova
     st.session_state.quarentena = nova_quarentena
 
 agora = datetime.now()
@@ -127,26 +130,50 @@ if len(st.session_state.historico) >= 30:
     expansion_score = brain.detectar_expansao(st.session_state.historico)
     
     banco = analisar_banco()
-    tx_roxa, tx_rosa, ocorrencias = 0, 0, 0
+    
+    # ⚠️ PASSO 1: IMPLEMENTAÇÃO DA MEMÓRIA QUENTE (ÚLTIMAS 120 VELAS)
+    historico_quente = st.session_state.historico[-120:]
+    banco_quente = {}
+    if len(historico_quente) >= 6:
+        for i in range(5, len(historico_quente)):
+            pad = brain.gerar_padrao(historico_quente[i-5:i])
+            if pad:
+                if pad not in banco_quente: banco_quente[pad] = {"total": 0, "roxa": 0, "rosa": 0}
+                banco_quente[pad]["total"] += 1
+                if historico_quente[i] >= 2: banco_quente[pad]["roxa"] += 1
+                if historico_quente[i] >= 10: banco_quente[pad]["rosa"] += 1
+
+    # ⚠️ PASSO 2: DIFERENCIAÇÃO DE TAXAS HISTÓRICAS VS QUENTES
+    tx_roxa = tx_rosa = tx_roxa_quente = tx_rosa_quente = ocorrencias = ocorrencias_q = 0
+    
     if padrao_atual in banco:
         dados_p = banco[padrao_atual]
         ocorrencias = dados_p["total"]
         tx_roxa = (dados_p["roxa"] / ocorrencias) * 100
         tx_rosa = (dados_p["rosa"] / ocorrencias) * 100
         
-    adaptive_score = brain.calcular_score_adaptive(st.session_state.historico, tx_roxa, tx_rosa, ocorrencias, st.session_state.ultimos_resultados, janela_ativa)
+    if padrao_atual in banco_quente:
+        dados_q = banco_quente[padrao_atual]
+        ocorrencias_q = dados_q["total"]
+        tx_roxa_quente = (dados_q["roxa"] / ocorrencias_q) * 100
+        tx_rosa_quente = (dados_q["rosa"] / ocorrencias_q) * 100
+        
+    # ⚠️ PASSO 3: CONSENSO VIVO (PESO PRESENTE 65% VS HISTÓRICO 35%)
+    peso_historico, peso_quente = 0.35, 0.65
+    tx_roxa_final = (tx_roxa * peso_historico) + (tx_roxa_quente * peso_quente)
+    tx_rosa_final = (tx_rosa * peso_historico) + (tx_rosa_quente * peso_quente)
     
-    # ⚠️ PRIORIDADE 1: CONTEXTO COMPOSTO POR FAIXAS DE DISTÂNCIA
+    # Executa o cálculo adaptativo alimentado pelo consenso das taxas refinadas
+    adaptive_score = brain.calcular_score_adaptive(st.session_state.historico, tx_roxa_final, tx_rosa_final, ocorrencias, st.session_state.ultimos_resultados, janela_ativa)
+    
     if st.session_state.distancia_rosa <= 5: faixa_rosa = "CURTA"
     elif st.session_state.distancia_rosa <= 12: faixa_rosa = "MEDIA"
     else: faixa_rosa = "LONGA"
     
     contexto_chave = f"{padrao_atual}_{fase_macro}_{faixa_rosa}"
-    
     if contexto_chave in st.session_state.memoria_positiva:
         adaptive_score = min(adaptive_score + 8, 100)
         
-    # ⚠️ PRIORIDADE 3: QUARENTENA MULTICEREBRAL GRADUAL (Afeta múltiplos cérebros)
     penalidade_quarentena = 0
     if contexto_chave in st.session_state.quarentena:
         rodadas_restantes = st.session_state.quarentena[contexto_chave]
@@ -156,11 +183,20 @@ if len(st.session_state.historico) >= 30:
     radar_score = max(radar_score - int(penalidade_quarentena * 0.3), 0)
     expansion_score = max(expansion_score - int(penalidade_quarentena * 0.5), 0)
     
-    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa)
+    # ⚠️ PASSO 5: DETECTOR DE HUMOR EM TEMPO REAL
+    mercado_instavel = tx_roxa_quente < 35 and radar_score < 45 and expansion_score < 45
+    mercado_favoravel = tx_roxa_quente >= 55 and radar_score >= 60
+    
+    # ⚠️ PASSO 6: BÔNUS OU ÔNUS BASEADO NO HUMOR DO MOMENTO
+    if mercado_favoravel: adaptive_score += 8
+    if mercado_instavel: adaptive_score -= 12
+    adaptive_score = max(min(adaptive_score, 100), 0)
+    
+    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel)
     st.session_state.ultima_entrada = sinal_final
     st.session_state.ultimo_contexto = contexto_chave
 else:
-    sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, tx_rosa, padrao_atual, adaptive_score = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, 0, "---", 0
+    sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, tx_rosa, tx_roxa_quente, tx_rosa_quente, padrao_atual, adaptive_score = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, 0, 0, 0, "---", 0
 
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
@@ -183,21 +219,14 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
                 st.session_state.erros += 1
                 st.session_state.ultimos_resultados.append("LOSS")
             else:
-                if len(st.session_state.memoria_positiva) >= 300:
-                    st.session_state.memoria_positiva.pop(0)
-                if st.session_state.ultimo_contexto not in st.session_state.memoria_positiva:
-                    st.session_state.memoria_positiva.append(st.session_state.ultimo_contexto)
-                    
+                if len(st.session_state.memoria_positiva) >= 300: st.session_state.memoria_positiva.pop(0)
+                if st.session_state.ultimo_contexto not in st.session_state.memoria_positiva: st.session_state.memoria_positiva.append(st.session_state.ultimo_contexto)
                 st.session_state.acertos += 1
                 st.session_state.ultimos_resultados.append("WIN")
                 
-        # ⚠️ PRIORIDADE 2: HISTÓRICO RECENTE MÓVEL (Corta os resultados mais velhos que 50)
-        if len(st.session_state.ultimos_resultados) > 50:
-            st.session_state.ultimos_resultados.pop(0)
+        if len(st.session_state.ultimos_resultados) > 50: st.session_state.ultimos_resultados.pop(0)
 
-    if len(st.session_state.historico) >= 5:
-        st.session_state.banco_padroes.append({"padrao": brain.gerar_padrao(st.session_state.historico), "resultado": vela})
-        
+    if len(st.session_state.historico) >= 5: st.session_state.banco_padroes.append({"padrao": brain.gerar_padrao(st.session_state.historico), "resultado": vela})
     st.session_state.historico.append(vela)
     st.session_state.distancia_rosa = 0 if vela >= 10 else st.session_state.distancia_rosa + 1
     salvar_memoria()
@@ -217,12 +246,16 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown(f"**🛡️ Cérebro Defensivo (Fase Macro):** {fase_macro}")
     st.markdown(f"**⚡ Radar Rosa (Micro Pressão):** {radar_score}%")
-    st.markdown(f"**📊 Ocorrências Mapeadas:** {ocorrencias}")
-    st.markdown(f"**📉 Taxa Roxa Registrada:** {tx_roxa:.1f}%")
+    st.markdown(f"**📊 Ocorrências Mapeadas (Total):** {ocorrencias}")
+    st.markdown(f"**📉 Taxa Roxa Global:** {tx_roxa:.1f}%")
+    # ⚠️ PASSO 7: EXIBIÇÃO DA TAXA ROXA QUENTE OPERACIONAL
+    st.markdown(f"**🔥 Taxa Roxa Quente:** {tx_roxa_quente:.1f}%")
 with col2:
     st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
     st.markdown(f"**🧬 Força Base (Core Adaptive):** {adaptive_score}%")
-    st.markdown(f"**🌸 Taxa Rosa Registrada:** {tx_rosa:.1f}%")
+    st.markdown(f"**🌸 Taxa Rosa Global:** {tx_rosa:.1f}%")
+    # ⚠️ PASSO 7: EXIBIÇÃO DA TAXA ROSA QUENTE OPERACIONAL
+    st.markdown(f"**🌸 Taxa Rosa Quente:** {tx_rosa_quente:.1f}%")
     st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rodadas")
 
 if len(st.session_state.historico) > 0:
