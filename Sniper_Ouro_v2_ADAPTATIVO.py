@@ -73,7 +73,6 @@ if "dados_carregados" not in st.session_state:
     st.session_state.ultimo_contexto = None
     st.session_state.dados_carregados = True
 
-# ⚠️ AJUSTE CRÍTICO 1: CORREÇÃO DO BUG DE DECAIMENTO DA QUARENTENA POR REVERSÃO E ALTO VALOR
 if st.session_state.quarentena:
     nova_quarentena = {}
     for ctx, rodadas in st.session_state.quarentena.items():
@@ -187,30 +186,28 @@ if len(st.session_state.historico) >= 30:
     adaptive_score -= min(peso_cicatriz * 1.5, 18)
     adaptive_score = max(adaptive_score, 0)
     
-    # Sincronização de travas de segurança
     mercado_instavel = tx_roxa_quente < 38 and radar_score < 50 and expansion_score < 48
     mercado_favoravel = tx_roxa_quente >= 58 and radar_score >= 65
     
-    # Aplicação da nova Exaustão Estatística Antecipada
     exaustao_detectada = brain.detectar_exaustao(st.session_state.historico)
     if exaustao_detectada:
         adaptive_score = max(adaptive_score - 10, 0)
         radar_score = max(radar_score - 8, 0)
         
-    # ⚠️ AJUSTE CRÍTICO 2: AMORTECEDOR DE ACELERAÇÃO (PreSERVA O TETO EM 8 PONTOS MÁXIMOS)
+    # ⚠️ AJUSTE 2: CLAMPS INLINE ADICIONADOS PARA IMPEDIR QUE OS ESCORES EXCEDAM O TETO DE 100
     bonus_aceleracao = 0
     if aceleracoes["roxa"]:
         bonus_aceleracao += 4
-        radar_score += 4
+        radar_score = min(radar_score + 4, 100)
     if aceleracoes["rosa"]:
-        expansion_score += 6
+        expansion_score = min(expansion_score + 6, 100)
         bonus_aceleracao += 3
     if aceleracoes["densidade"]:
         bonus_aceleracao += 4
         
-    adaptive_score += min(bonus_aceleracao, 8)
+    adaptive_score = min(adaptive_score + min(bonus_aceleracao, 8), 100)
         
-    if mercado_favoravel: adaptive_score += 6
+    if mercado_favoravel: adaptive_score = min(adaptive_score + 6, 100)
     if mercado_instavel: adaptive_score = max(adaptive_score - 10, 0)
     if exaustao_detectada: adaptive_score = max(adaptive_score - 6, 0)
     
@@ -219,6 +216,11 @@ if len(st.session_state.historico) >= 30:
     expansion_score = max(min(expansion_score, 100), 0)
     
     sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel)
+    
+    # ⚠️ AJUSTE 3: ALINHAMENTO VISUAL DE UX DE SCORES ELITE FIXANDO O PISO EM 68%
+    if "ELITE" in sinal_final and score_final < 68:
+        score_final = 68
+        
     st.session_state.ultima_entrada = sinal_final
     st.session_state.ultimo_contexto = contexto_chave
 else:
