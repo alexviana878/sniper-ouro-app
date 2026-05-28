@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA REFINADO: PESOS DINÂMICOS E MEMÓRIA POSITIVA
+# ECOSSISTEMA PREMIUM V2: ANÁLISE CRÍTICA E REFINAMENTO FINO
 # =========================================================
 
 def classificar_vela(valor):
@@ -41,6 +41,16 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimo
     fase = detectar_fase(historico)
     pressao_radar = calcular_pressao_radar(historico, janela_ativa)
     
+    # ⚠️ AJUSTE 4: CONTEXTO EXPANDIDO VOLUMÉTRICO (Análise dinâmica sem travar a string)
+    if len(historico) >= 10:
+        reds_curto_5 = sum(1 for x in historico[-5:] if x < 2)  # Reversão Rápida
+        reds_medio_7 = sum(1 for x in historico[-7:] if x < 2)  # Tendência Defensiva
+        reds_longo_10 = sum(1 for x in historico[-10:] if x < 2) # Macro Ciclo
+        
+        if reds_curto_5 >= 4: score += 10
+        if reds_medio_7 >= 5: score += 10
+        if reds_longo_10 >= 8: score += 15
+
     if taxa_roxa >= 70: score += 15
     if taxa_roxa >= 80: score += 20
     if taxa_roxa >= 90: score += 25
@@ -50,18 +60,22 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimo
     if ocorrencias >= 20: score += 15
     if ocorrencias >= 30: score += 20
 
-    score += pressao_radar * 0.4
+    score += pressao_radar * 0.35
 
     if fase == "DEFENSIVA": score -= 15
-    if len(ultimos_resultados) >= 3:
-        erros = ultimos_resultados[-3:].count("LOSS")
-        if erros >= 2: score -= 12
+    
+    # ⚠️ AJUSTE 5: SCORE DE CONFIANÇA HISTÓRICA (Janela móvel de assertividade real)
+    if ultimos_resultados:
+        janela_performance = ultimos_resultados[-10:]
+        wins = janela_performance.count("WIN")
+        consistencia = (wins / len(janela_performance)) * 100
+        
+        # Injeta bônus ou punição baseado na consistência real das últimas operações
+        if consistencia >= 70: score += 15
+        elif consistencia <= 30: score -= 20
         
     return min(max(int(score), 0), 100)
 
-# =========================================================
-# PASSO 5: AJUSTAR O CÉREBRO ROSA (CRESCIMENTO PROGRESSIVO)
-# =========================================================
 def calcular_distancia_rosa(historico):
     for i in range(len(historico) - 1, -1, -1):
         if historico[i] >= 10:
@@ -85,7 +99,6 @@ def detectar_expansao(historico):
     compressao = calcular_compressao(historico)
     
     score = 0
-    # Modificação Passo 5: Despertar progressivo e natural da IA
     if distancia >= 10: score += 20
     if distancia >= 15: score += 35
     if distancia >= 20: score += 50
@@ -93,24 +106,16 @@ def detectar_expansao(historico):
     score += compressao * 0.5
     return min(int(score), 100)
 
-# =========================================================
-# PASSO 1 E 2: MOTOR DE CONSENSO COM PESOS DINÂMICOS
-# =========================================================
-def calcular_consenso(adaptive_score, radar_score, expansion_score, bloqueado, fase_macro):
-    if bloqueado:
-        return "🚫 QUARENTENA", 0
-        
-    # SINAL EXCLUSIVO PASSO 2: ROSA ELITE (Antes de calcular o final comum)
+def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro):
+    # O cálculo de quarentena gradual foi movido para o orquestrador principal para maior dinamismo
     if expansion_score >= 85 and adaptive_score >= 70 and radar_score >= 70:
         final_rosa = (adaptive_score * 0.35) + (radar_score * 0.25) + (expansion_score * 0.40)
         return "🌸 POSSÍVEL ROSA ELITE", min(int(final_rosa), 100)
 
-    # REFINAMENTO PASSO 1: Configuração padrão focada em Estabilidade e 2x
     peso_adaptive = 0.50
     peso_radar = 0.20
     peso_expansion = 0.30
     
-    # Se o cérebro rosa acordar, ele ganha dominância nos pesos dinamicamente
     if expansion_score >= 70:
         peso_adaptive = 0.35
         peso_radar = 0.25
@@ -123,7 +128,6 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, bloqueado, f
         
     final = max(0, min(100, int(final)))
     
-    # Retorno das diretrizes operacionais base 2x
     if final >= 92: return "🔥 ENTRADA ELITE (2x)", final
     if final >= 82: return "🟢 BOA CHANCE AGORA (2x)", final
     if final >= 50: return "🟡 OBSERVANDO", final
