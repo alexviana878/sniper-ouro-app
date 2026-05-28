@@ -158,7 +158,8 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         sinal_ativo = st.session_state.ultima_entrada
         
         # GERENCIAMENTO INTELIGENTE DA MEMÓRIA DE ACERTOS E ERROS
-        if "ROSA ELITE" in sinal_ativo:
+        # GERENCIAMENTO INTELIGENTE DA MEMÓRIA DE ACERTOS E ERROS (CORRIGIDO)
+        if "ROSA" in sinal_ativo:
             deu_green = vela >= 10
             is_rosa_signal = True
         else:
