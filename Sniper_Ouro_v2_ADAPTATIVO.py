@@ -140,7 +140,6 @@ if len(st.session_state.historico) >= 30:
     if contexto_chave in st.session_state.memoria_positiva:
         adaptive_score = min(adaptive_score + 8, 100)
         
-    # ⚠️ AJUSTE 2: QUARENTENA GRADUAL DINÂMICA (Substitui o bloqueio sim/não)
     penalidade_quarentena = 0
     if contexto_chave in st.session_state.quarentena:
         rodadas_restantes = st.session_state.quarentena[contexto_chave]
@@ -175,7 +174,6 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
                 st.session_state.erros += 1
                 st.session_state.ultimos_resultados.append("LOSS")
             else:
-                # ⚠️ AJUSTE 1: FILA DE MEMÓRIA POSITIVA ENVELHECIDA (Máximo 300 contexts)
                 if len(st.session_state.memoria_positiva) >= 300:
                     st.session_state.memoria_positiva.pop(0)
                 if st.session_state.ultimo_contexto not in st.session_state.memoria_positiva:
@@ -201,17 +199,19 @@ elif "OBSERVANDO" in sinal_final: cor_card = "gold-card"
 
 st.markdown(f'<div class="{cor_card}"><h1 style="text-align:center;font-size:38px;margin:0;">{sinal_final}</h1><p style="text-align:center;margin:5px 0 0 0;font-size:18px;"><b>FORÇA DO CONSENSO IA:</b> {score_final}% | <b>PADRÃO ATUAL:</b> {padrao_atual}</p></div>', unsafe_allow_html=True)
 
+# BLOCK REORGANIZADO: EXIBE AS TAXAS ROXA, ROSA E A DISTÂNCIA EM DUAS COLUNAS EQUILIBRADAS
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
 with col1:
     st.markdown(f"**🛡️ Cérebro Defensivo (Fase Macro):** {fase_macro}")
     st.markdown(f"**⚡ Radar Rosa (Micro Pressão):** {radar_score}%")
     st.markdown(f"**📊 Ocorrências Mapeadas:** {ocorrencias}")
+    st.markdown(f"**📉 Taxa Roxa Registrada:** {tx_roxa:.1f}%")
 with col2:
     st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
     st.markdown(f"**🧬 Força Base (Core Adaptive):** {adaptive_score}%")
-    # ⚠️ AJUSTE 3: EXIBIÇÃO OBRIGATÓRIA DA TAXA ROSA REGISTRADA
     st.markdown(f"**🌸 Taxa Rosa Registrada:** {tx_rosa:.1f}%")
+    st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rodadas")
 
 if len(st.session_state.historico) > 0:
     st.markdown('<div class="main-card"><h3>📊 MONITOR DE FLUXO EM TEMPO REAL</h3></div>', unsafe_allow_html=True)
@@ -221,7 +221,7 @@ if len(st.session_state.historico) > 0:
 
 if st.session_state.memoria_positiva:
     with st.expander(f"🌟 MEMÓRIA POSITIVA ATIVA ({len(st.session_state.memoria_positiva)}/300 PADRÕES ATIVOS)", expanded=False):
-        for ctx in st.session_state.memoria_positiva[-10:]:  # Exibe os 10 mais recentes na interface para não poluir
+        for ctx in st.session_state.memoria_positiva[-10:]:
             st.markdown(f"💎 **Contexto Consolidado:** `{ctx}` (+8% Score bônus)")
 
 if st.session_state.quarentena:
@@ -242,7 +242,6 @@ st.markdown(f"<p style='color:#666;text-align:center;font-size:12px;'>Base Total
 
 if st.button("RESETAR ECOSSISTEMA TOTAL"):
     if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
-    # ⚠️ AJUSTE 6: RESET COMPLETO DE VERDADE (Variáveis órfãs incluídas)
     st.session_state.historico, st.session_state.banco_padroes, st.session_state.distancia_rosa, st.session_state.acertos, st.session_state.erros, st.session_state.ultimos_resultados, st.session_state.quarentena, st.session_state.memoria_positiva = [], [], 0, 0, 0, [], {}, []
     st.session_state.ultima_entrada = None
     st.session_state.ultimo_contexto = None
