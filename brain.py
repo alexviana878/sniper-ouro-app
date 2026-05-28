@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA PREMIUM V8: PESOS DINÂMICOS E REFINAMENTOS CRÍTICOS
+# ECOSSISTEMA PREMIUM V8.1: REFINAMENTOS FINOS DE ACELERAÇÃO
 # =========================================================
 
 def classificar_vela(valor):
@@ -103,7 +103,6 @@ def detectar_expansao(historico):
     score += compressao * 0.5
     return min(int(score), 100)
 
-# ⚠️ AJUSTE CRÍTICO 3: EXAUSTÃO REFINADA ANTECIPADA (JANELA DE 6 VELAS)
 def detectar_exaustao(historico):
     if len(historico) < 6:
         return False
@@ -121,6 +120,7 @@ def detectar_exaustao(historico):
     
     return False
 
+# ⚠️ AJUSTE 1: INTEGRADO ROXAS8 PARA REDUZIR ACELERAÇÕES FALSAS
 def detectar_aceleracao(historico):
     if len(historico) < 8:
         return {"roxa": False, "rosa": False, "densidade": False}
@@ -135,7 +135,7 @@ def detectar_aceleracao(historico):
     roxas4 = len([v for v in ultimas4 if v >= 2])
     rosas4 = len([v for v in ultimas4 if v >= 10])
 
-    aceleracao_roxa = (roxas4 >= 2 and media4 > media8)
+    aceleracao_roxa = (roxas4 >= 2 and roxas8 >= 3 and media4 > media8)
     aceleracao_rosa = (rosas4 >= 1 and media4 >= 4)
     aceleracao_densidade = (media8 <= 1.7 and media4 >= 2.4)
 
@@ -145,14 +145,11 @@ def detectar_aceleracao(historico):
         "densidade": aceleracao_densidade
     }
 
-# ⚠️ AJUSTE CRÍTICO 4 E 5: CONSENSO COM PESOS DINÂMICOS E REGRAS MENOS RÍGIDAS
 def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel):
-    # Distribuição base de pesos
     peso_adaptive = 0.50
     peso_radar = 0.30
     peso_expansion = 0.20
 
-    # Mudança dinâmica de prioridade conforme a liderança operacional dos cérebros
     if expansion_score >= 75:
         peso_expansion = 0.30
         peso_adaptive = 0.40
@@ -172,7 +169,6 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
     if expansion_score >= 88 and adaptive_score >= 78 and tx_roxa_quente >= 58:
         return "🌸 ROSA ELITE", int(score_final)
 
-    # Regra flexibilizada: de 72/62/52 para 68/58/48 para capturar os greens em transição
     if adaptive_score >= 68 and radar_score >= 58 and tx_roxa_quente >= 48:
         return "🟢 CHANCE ELITE", int(score_final)
 
