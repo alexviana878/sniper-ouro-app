@@ -42,7 +42,8 @@ def carregar_memoria():
         try:
             with open(ARQUIVO_MEMORIA, "r") as f: return json.load(f)
         except: pass
-    return {"historico": [], "banco_padroes": [], "distancia_rosa": 0, "acertos": 0, "erros": 0, "ultimos_resultados": [], "quarentena": {}, "memoria_positiva": []}
+    # ⚠️ GARGALO 3: ADICIONADA A ESTRUTURA DA MEMÓRIA NEGATIVA INICIAL
+    return {"historico": [], "banco_padroes": [], "distancia_rosa": 0, "acertos": 0, "erros": 0, "ultimos_resultados": [], "quarentena": {}, "memoria_positiva": [], "memoria_negativa": {}}
 
 def salvar_memoria():
     dados = {
@@ -53,7 +54,9 @@ def salvar_memoria():
         "erros": st.session_state.erros, 
         "ultimos_resultados": st.session_state.ultimos_resultados, 
         "quarentena": st.session_state.quarentena,
-        "memoria_positiva": st.session_state.memoria_positiva
+        "memoria_positiva": st.session_state.memoria_positiva,
+        # Persiste a memória negativa das cicatrizes
+        "memoria_negativa": st.session_state.memoria_negativa
     }
     with open(ARQUIVO_MEMORIA, "w") as f: json.dump(dados, f)
 
@@ -67,11 +70,12 @@ if "dados_carregados" not in st.session_state:
     st.session_state.ultimos_resultados = dados.get("ultimos_resultados", [])
     st.session_state.quarentena = dados.get("quarentena", {})
     st.session_state.memoria_positiva = dados.get("memoria_positiva", [])
+    # Carrega os estados da memória negativa
+    st.session_state.memoria_negativa = dados.get("memoria_negativa", {})
     st.session_state.ultima_entrada = None
     st.session_state.ultimo_contexto = None
     st.session_state.dados_carregados = True
 
-# ⚠️ PASSO 4: ENVELHECIMENTO DINÂMICO ACELERADO DA QUARENTENA
 if st.session_state.quarentena:
     nova_quarentena = {}
     for ctx, rodadas in st.session_state.quarentena.items():
@@ -88,6 +92,7 @@ st.markdown(f'<div class="clock-card"><h2 style="color:#00ff66 !important;margin
 
 st.title("🎯 SNIPER OURO IA ADAPTIVE V2")
 
+# RETORNADO PARA CARGA ÚNICA ULTRAESTÁVEL (Previne loops visuais na tela)
 with st.expander("📂 RE-ABASTECER INTELIGÊNCIA CENTRAL (10.003 RODADAS)", expanded=False):
     arquivo = st.file_uploader("Suba a sua base viva completa", type=["csv","txt"])
     if arquivo is not None and len(st.session_state.historico) == 0:
@@ -131,7 +136,6 @@ if len(st.session_state.historico) >= 30:
     
     banco = analisar_banco()
     
-    # ⚠️ PASSO 1: IMPLEMENTAÇÃO DA MEMÓRIA QUENTE (ÚLTIMAS 120 VELAS)
     historico_quente = st.session_state.historico[-120:]
     banco_quente = {}
     if len(historico_quente) >= 6:
@@ -143,7 +147,6 @@ if len(st.session_state.historico) >= 30:
                 if historico_quente[i] >= 2: banco_quente[pad]["roxa"] += 1
                 if historico_quente[i] >= 10: banco_quente[pad]["rosa"] += 1
 
-    # ⚠️ PASSO 2: DIFERENCIAÇÃO DE TAXAS HISTÓRICAS VS QUENTES
     tx_roxa = tx_rosa = tx_roxa_quente = tx_rosa_quente = ocorrencias = ocorrencias_q = 0
     
     if padrao_atual in banco:
@@ -158,12 +161,11 @@ if len(st.session_state.historico) >= 30:
         tx_roxa_quente = (dados_q["roxa"] / ocorrencias_q) * 100
         tx_rosa_quente = (dados_q["rosa"] / ocorrencias_q) * 100
         
-    # ⚠️ PASSO 3: CONSENSO VIVO (PESO PRESENTE 65% VS HISTÓRICO 35%)
-    peso_historico, peso_quente = 0.35, 0.65
+    # ⚠️ GARGALO 2: AJUSTE IDEAL DE PESOS EQUILIBRADOS (55% HISTÓRICO VS 45% QUENTE)
+    peso_historico, peso_quente = 0.55, 0.45
     tx_roxa_final = (tx_roxa * peso_historico) + (tx_roxa_quente * peso_quente)
     tx_rosa_final = (tx_rosa * peso_historico) + (tx_rosa_quente * peso_quente)
     
-    # Executa o cálculo adaptativo alimentado pelo consenso das taxas refinadas
     adaptive_score = brain.calcular_score_adaptive(st.session_state.historico, tx_roxa_final, tx_rosa_final, ocorrencias, st.session_state.ultimos_resultados, janela_ativa)
     
     if st.session_state.distancia_rosa <= 5: faixa_rosa = "CURTA"
@@ -174,20 +176,22 @@ if len(st.session_state.historico) >= 30:
     if contexto_chave in st.session_state.memoria_positiva:
         adaptive_score = min(adaptive_score + 8, 100)
         
+    # ⚠️ GARGALO 1: APENAS O ADAPTIVE É PENALIZADO (Radar e Expansão removidos da punição)
     penalidade_quarentena = 0
     if contexto_chave in st.session_state.quarentena:
         rodadas_restantes = st.session_state.quarentena[contexto_chave]
         penalidade_quarentena = min(rodadas_restantes * 2, 30)
         
     adaptive_score = max(adaptive_score - penalidade_quarentena, 0)
-    radar_score = max(radar_score - int(penalidade_quarentena * 0.3), 0)
-    expansion_score = max(expansion_score - int(penalidade_quarentena * 0.5), 0)
     
-    # ⚠️ PASSO 5: DETECTOR DE HUMOR EM TEMPO REAL
+    # ⚠️ GARGALO 3: APLICAÇÃO DA CICATRIZ DA MEMÓRIA NEGATIVA GRADUAL
+    peso_cicatriz = st.session_state.memoria_negativa.get(contexto_chave, 0)
+    adaptive_score -= min(peso_cicatriz * 1.5, 18)
+    adaptive_score = max(adaptive_score, 0)
+    
     mercado_instavel = tx_roxa_quente < 35 and radar_score < 45 and expansion_score < 45
     mercado_favoravel = tx_roxa_quente >= 55 and radar_score >= 60
     
-    # ⚠️ PASSO 6: BÔNUS OU ÔNUS BASEADO NO HUMOR DO MOMENTO
     if mercado_favoravel: adaptive_score += 8
     if mercado_instavel: adaptive_score -= 12
     adaptive_score = max(min(adaptive_score, 100), 0)
@@ -218,6 +222,11 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
                 st.session_state.quarentena[st.session_state.ultimo_contexto] = tempo_quarentena
                 st.session_state.erros += 1
                 st.session_state.ultimos_resultados.append("LOSS")
+                
+                # ⚠️ GARGALO 3: ADICIONA PESO DE CICATRIZ NA MEMÓRIA NEGATIVA DO CONTEXTO
+                ctx_errado = st.session_state.ultimo_contexto
+                if ctx_errado not in st.session_state.memoria_negativa: st.session_state.memoria_negativa[ctx_errado] = 0
+                st.session_state.memoria_negativa[ctx_errado] += 1
             else:
                 if len(st.session_state.memoria_positiva) >= 300: st.session_state.memoria_positiva.pop(0)
                 if st.session_state.ultimo_contexto not in st.session_state.memoria_positiva: st.session_state.memoria_positiva.append(st.session_state.ultimo_contexto)
@@ -248,13 +257,11 @@ with col1:
     st.markdown(f"**⚡ Radar Rosa (Micro Pressão):** {radar_score}%")
     st.markdown(f"**📊 Ocorrências Mapeadas (Total):** {ocorrencias}")
     st.markdown(f"**📉 Taxa Roxa Global:** {tx_roxa:.1f}%")
-    # ⚠️ PASSO 7: EXIBIÇÃO DA TAXA ROXA QUENTE OPERACIONAL
     st.markdown(f"**🔥 Taxa Roxa Quente:** {tx_roxa_quente:.1f}%")
 with col2:
     st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
     st.markdown(f"**🧬 Força Base (Core Adaptive):** {adaptive_score}%")
     st.markdown(f"**🌸 Taxa Rosa Global:** {tx_rosa:.1f}%")
-    # ⚠️ PASSO 7: EXIBIÇÃO DA TAXA ROSA QUENTE OPERACIONAL
     st.markdown(f"**🌸 Taxa Rosa Quente:** {tx_rosa_quente:.1f}%")
     st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rodadas")
 
@@ -270,7 +277,7 @@ if st.session_state.memoria_positiva:
             st.markdown(f"💎 **Contexto Composto:** `{ctx}` (+8% Score bônus)")
 
 if st.session_state.quarentena:
-    st.markdown('<div class="blue-card"><h3>❄️ CONTEXTOS EM QUARENTENA ATIVA (PENALIDADE MULTICÉREBRO)</h3></div>', unsafe_allow_html=True)
+    st.markdown('<div class="blue-card"><h3>❄️ CONTEXTOS EM QUARENTENA ATIVA (PENALIDADE GRADUAL)</h3></div>', unsafe_allow_html=True)
     for ctx, rds in st.session_state.quarentena.items():
         peso_penalidade = min(rds * 2, 30)
         st.write(f"🚫 **Geladeira:** `{ctx}` → Restam **{rds}** rodadas (Penalidade Ativa: -{peso_penalidade}%)")
@@ -287,7 +294,7 @@ st.markdown(f"<p style='color:#666;text-align:center;font-size:12px;'>Base Total
 
 if st.button("RESETAR ECOSSISTEMA TOTAL"):
     if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
-    st.session_state.historico, st.session_state.banco_padroes, st.session_state.distancia_rosa, st.session_state.acertos, st.session_state.erros, st.session_state.ultimos_resultados, st.session_state.quarentena, st.session_state.memoria_positiva = [], [], 0, 0, 0, [], {}, []
+    st.session_state.historico, st.session_state.banco_padroes, st.session_state.distancia_rosa, st.session_state.acertos, st.session_state.erros, st.session_state.ultimos_resultados, st.session_state.quarentena, st.session_state.memoria_positiva, st.session_state.memoria_negativa = [], [], 0, 0, 0, [], {}, [], {}
     st.session_state.ultima_entrada = None
     st.session_state.ultimo_contexto = None
     salvar_memoria()
