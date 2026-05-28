@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA PREMIUM V3: CONTEXTO COMPOSTO E AMBIENTE RUIM
+# ECOSSISTEMA PREMIUM V4: INTEGRAÇÃO DE MEMÓRIA QUENTE
 # =========================================================
 
 def classificar_vela(valor):
@@ -64,7 +64,6 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, ultimo
     if fase == "DEFENSIVA": score -= 15
     
     if ultimos_resultados:
-        # Puxa apenas a janela móvel limitada (recente) para avaliar consistência
         janela_performance = ultimos_resultados[-10:]
         wins = janela_performance.count("WIN")
         consistencia = (wins / len(janela_performance)) * 100
@@ -104,10 +103,10 @@ def detectar_expansao(historico):
     score += compressao * 0.5
     return min(int(score), 100)
 
-def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa):
-    # ⚠️ PRIORIDADE 5: DETECTAR AMBIENTE RUIM (Bloqueio preventivo total)
-    if tx_roxa < 35 and radar_score < 40 and expansion_score < 40:
-        return "🔴 AMBIENTE INSTÁVEL (🚫)", 0
+def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel):
+    # ⚠️ PASSO 5: DETECTOR DE AMBIENTE CRÍTICO BASEADO NA TAXA QUENTE
+    if mercado_instavel:
+        return "🚫 AMBIENTE INSTÁVEL", 0
 
     if expansion_score >= 85 and adaptive_score >= 70 and radar_score >= 70:
         final_rosa = (adaptive_score * 0.35) + (radar_score * 0.25) + (expansion_score * 0.40)
