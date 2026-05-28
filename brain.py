@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA PREMIUM V7: ACELERAÇÃO E TRANSIÇÃO DE ESTADO
+# ECOSSISTEMA PREMIUM V8: PESOS DINÂMICOS E REFINAMENTOS CRÍTICOS
 # =========================================================
 
 def classificar_vela(valor):
@@ -103,21 +103,24 @@ def detectar_expansao(historico):
     score += compressao * 0.5
     return min(int(score), 100)
 
+# ⚠️ AJUSTE CRÍTICO 3: EXAUSTÃO REFINADA ANTECIPADA (JANELA DE 6 VELAS)
 def detectar_exaustao(historico):
-    if len(historico) < 5:
+    if len(historico) < 6:
         return False
     
-    bytes5 = historico[-5:]
-    media5 = sum(bytes5) / len(bytes5)
-    muitos_baixos = len([v for v in bytes5 if v <= 1.20])
+    ultimas6 = historico[-6:]
+    media6 = sum(ultimas6) / 6
+    altos = len([v for v in ultimas6 if v >= 5])
+    rosas = len([v for v in ultimas6 if v >= 10])
+    baixos = len([v for v in ultimas6 if v <= 1.30])
     
-    if media5 > 4.5: return True
-    if muitos_baixos >= 4: return True
-    if len([v for v in bytes5 if v >= 10]) >= 1 and media5 > 3: return True
+    if media6 >= 3.8: return True
+    if altos >= 3: return True
+    if rosas >= 2: return True
+    if baixos >= 5: return True
     
     return False
 
-# ⚠️ NOVO BLOCO: DETECTOR ESTATÍSTICO DE ACELERAÇÃO RECENTE
 def detectar_aceleracao(historico):
     if len(historico) < 8:
         return {"roxa": False, "rosa": False, "densidade": False}
@@ -142,8 +145,23 @@ def detectar_aceleracao(historico):
         "densidade": aceleracao_densidade
     }
 
+# ⚠️ AJUSTE CRÍTICO 4 E 5: CONSENSO COM PESOS DINÂMICOS E REGRAS MENOS RÍGIDAS
 def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel):
-    score_final = (adaptive_score * 0.45) + (radar_score * 0.30) + (expansion_score * 0.25)
+    # Distribuição base de pesos
+    peso_adaptive = 0.50
+    peso_radar = 0.30
+    peso_expansion = 0.20
+
+    # Mudança dinâmica de prioridade conforme a liderança operacional dos cérebros
+    if expansion_score >= 75:
+        peso_expansion = 0.30
+        peso_adaptive = 0.40
+
+    if radar_score >= 80:
+        peso_radar = 0.40
+        peso_adaptive = 0.40
+
+    score_final = (adaptive_score * peso_adaptive) + (radar_score * peso_radar) + (expansion_score * peso_expansion)
 
     if mercado_instavel:
         return "⚠️ MERCADO INSTÁVEL", int(score_final)
@@ -154,7 +172,8 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
     if expansion_score >= 88 and adaptive_score >= 78 and tx_roxa_quente >= 58:
         return "🌸 ROSA ELITE", int(score_final)
 
-    if adaptive_score >= 72 and radar_score >= 62 and tx_roxa_quente >= 52:
+    # Regra flexibilizada: de 72/62/52 para 68/58/48 para capturar os greens em transição
+    if adaptive_score >= 68 and radar_score >= 58 and tx_roxa_quente >= 48:
         return "🟢 CHANCE ELITE", int(score_final)
 
     if adaptive_score >= 58:
