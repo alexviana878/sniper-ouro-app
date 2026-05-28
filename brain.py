@@ -1,6 +1,6 @@
 # brain.py
 # =========================================================
-# ECOSSISTEMA PREMIUM V4: INTEGRAÇÃO DE MEMÓRIA QUENTE
+# ECOSSISTEMA PREMIUM V5: EQUILÍBRIO DE PESOS E PRESSÃO VIVO
 # =========================================================
 
 def classificar_vela(valor):
@@ -104,7 +104,6 @@ def detectar_expansao(historico):
     return min(int(score), 100)
 
 def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel):
-    # ⚠️ PASSO 5: DETECTOR DE AMBIENTE CRÍTICO BASEADO NA TAXA QUENTE
     if mercado_instavel:
         return "🚫 AMBIENTE INSTÁVEL", 0
 
