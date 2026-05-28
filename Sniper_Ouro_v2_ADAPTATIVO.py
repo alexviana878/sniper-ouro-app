@@ -99,7 +99,7 @@ with st.expander("📂 RE-ABASTECER INTELIGÊNCIA CENTRAL (10.003 RODADAS)", exp
         linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n") if ln.strip()]
         novo_historico, novos_padroes, dist_rosa, contador = [], [], 0, 0
         
-        for file_line in lines:
+        for file_line in linhas:
             try:
                 limpo = "".join([c for c in file_line if c.isdigit() or c in [".", ","]])
                 if not limpo: continue
@@ -111,7 +111,7 @@ with st.expander("📂 RE-ABASTECER INTELIGÊNCIA CENTRAL (10.003 RODADAS)", exp
             
         if len(novo_historico) >= 6:
             for i in range(5, len(novo_historico)):
-                novos_padroes.append({"padrao": brain.generar_padrao(novo_historico[i-5:i]), "resultado": novo_historico[i]})
+                novos_padroes.append({"padrao": brain.gerar_padrao(novo_historico[i-5:i]), "resultado": novo_historico[i]})
 
         st.session_state.historico = novo_historico
         st.session_state.banco_padroes = novos_padroes
@@ -153,7 +153,7 @@ if len(st.session_state.historico) >= 30:
     st.session_state.ultima_entrada = sinal_final
     st.session_state.ultimo_contexto = contexto_chave
 else:
-    sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, padrao_atual = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, "---"
+    sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, padrao_atual, adaptive_score = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, "---", 0
 
 # =========================================================
 # 2. ÁREA OPERACIONAL ATRAZADA (CAMPO E DIRETRIZ JUNTOS)
@@ -213,7 +213,6 @@ with col2:
 # =========================================================
 if len(st.session_state.historico) > 0:
     st.markdown('<div class="main-card"><h3>📊 MONITOR DE FLUXO EM TEMPO REAL</h3></div>', unsafe_allow_html=True)
-    # Seleciona as últimas 16 velas
     ultimas_velas = st.session_state.historico[-16:]
     velas_texto = " → ".join([f"**[{v}]**" for v in ultimas_velas])
     st.markdown(f"<p style='font-size:18px;color:#00ff66;line-height:1.6;'>{velas_texto}</p>", unsafe_allow_html=True)
