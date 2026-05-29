@@ -42,7 +42,13 @@ def carregar_memoria():
         try:
             with open(ARQUIVO_MEMORIA, "r") as f: return json.load(f)
         except: pass
-    return {"historico": [], "banco_padroes": [], "distancia_rosa": 0, "acertos": 0, "erros": 0, "ultimos_resultados": [], "quarentena": {}, "memoria_positiva": [], "memoria_negativa": {}}
+    return {
+        "historico": [], "banco_padroes": [], "distancia_rosa": 0, 
+        "acertos": 0, "erros": 0, "ultimos_resultados": [], 
+        "quarentena": {}, "memoria_positiva": [], "memoria_negativa": {},
+        "perdas_consecutivas": 0, "max_loss_streak": 0, "modo_defensivo": False, "cooldown_rodadas": 0, "sinais_ignorados": 0,
+        "padroes_db": {}, "max_drawdown_calc": 0.0, "bloco_validacao": "NENHUM"
+    }
 
 def salvar_memoria():
     dados = {
@@ -54,7 +60,15 @@ def salvar_memoria():
         "ultimos_resultados": st.session_state.ultimos_resultados, 
         "quarentena": st.session_state.quarentena,
         "memoria_positiva": st.session_state.memoria_positiva,
-        "memoria_negativa": st.session_state.memoria_negativa
+        "memoria_negativa": st.session_state.memoria_negativa,
+        "perdas_consecutivas": st.session_state.perdas_consecutivas,
+        "max_loss_streak": st.session_state.max_loss_streak,
+        "modo_defensivo": st.session_state.modo_defensivo,
+        "cooldown_rodadas": st.session_state.cooldown_rodadas,
+        "sinais_ignorados": st.session_state.sinais_ignorados,
+        "padroes_db": st.session_state.padroes_db,
+        "max_drawdown_calc": st.session_state.max_drawdown_calc,
+        "bloco_validacao": st.session_state.bloco_validacao
     }
     with open(ARQUIVO_MEMORIA, "w") as f: json.dump(dados, f)
 
@@ -69,6 +83,14 @@ if "dados_carregados" not in st.session_state:
     st.session_state.quarentena = dados.get("quarentena", {})
     st.session_state.memoria_positiva = dados.get("memoria_positiva", [])
     st.session_state.memoria_negativa = dados.get("memoria_negativa", {})
+    st.session_state.perdas_consecutivas = dados.get("perdas_consecutivas", 0)
+    st.session_state.max_loss_streak = dados.get("max_loss_streak", 0)
+    st.session_state.modo_defensivo = dados.get("modo_defensivo", False)
+    st.session_state.cooldown_rodadas = dados.get("cooldown_rodadas", 0)
+    st.session_state.sinais_ignorados = dados.get("sinais_ignorados", 0)
+    st.session_state.padroes_db = dados.get("padroes_db", {})
+    st.session_state.max_drawdown_calc = dados.get("max_drawdown_calc", 0.0)
+    st.session_state.bloco_validacao = dados.get("bloco_validacao", "NENHUM")
     st.session_state.ultima_entrada = None
     st.session_state.ultimo_contexto = None
     st.session_state.dados_carregados = True
@@ -83,40 +105,85 @@ if st.session_state.quarentena:
         if nova > 0: nova_quarentena[ctx] = nova
     st.session_state.quarentena = nova_quarentena
 
+if st.session_state.modo_defensivo and st.session_state.cooldown_rodadas > 0:
+    st.session_state.cooldown_rodadas -= 1
+    if st.session_state.cooldown_rodadas <= 0:
+        st.session_state.modo_defensivo = False
+        st.session_state.perdas_consecutivas = 0
+
 agora = datetime.now()
 minutos_pagantes = [2,5,8,10,12,15,18,20,22,25,28,30,32,35,38,40,42,45,48,50,52,55,58,0]
 janela_ativa = agora.minute in minutos_pagantes
 
 st.markdown(f'<div class="clock-card"><h2 style="color:#00ff66 !important;margin:0;">{agora.strftime("%H:%M:%S")}</h2><p style="margin:0;color:#00ff66 !important;">{"⚠️ JANELA ATIVA DE EXPLOSÃO" if janela_ativa else "ECOSSISTEMA MONITORANDO"}</p></div>', unsafe_allow_html=True)
 
-st.title("🎯 SNIPER OURO IA ADAPTIVE V2")
+st.title("🎯 SNIPER OURO IA - LAB DE VALIDAÇÃO G9")
 
-with st.expander("📂 RE-ABASTECER INTELIGÊNCIA CENTRAL (10.003 RODADAS)", expanded=False):
-    arquivo = st.file_uploader("Suba a sua base viva completa", type=["csv","txt"])
+# ⚠️ ENGINE DE PREVÊNÇÃO DE OVERFITTING: SELEÇÃO DE BLOCO DE VALIDAÇÃO WALK-FORWARD
+with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expanded=False):
+    bloco_opcao = st.radio("Escolha a partição de dados para testar sobrevivência:", ["Carga Completa (Sem Divisão)", "Bloco 1 (Velas 1 a 10.000)", "Bloco 2 (Velas 10.001 a 15.000 - Fora da Amostra)", "Bloco 3 (Velas 15.001 a 20.000 - Fora da Amostra)"])
+    arquivo = st.file_uploader("Suba o arquivo master de dados", type=["csv","txt"])
+    
     if arquivo is not None and len(st.session_state.historico) == 0:
         conteudo = arquivo.read().decode("utf-8")
         linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n") if ln.strip()]
-        novo_historico, novos_padroes, dist_rosa, contador = [], [], 0, 0
+        dados_brutos = []
         for file_line in linhas:
             try:
                 limpo = "".join([c for c in file_line if c.isdigit() or c in [".", ","]])
                 if not limpo: continue
-                valor = float(limpo.replace(",", "."))
-                novo_historico.append(valor)
-                dist_rosa = 0 if valor >= 10 else dist_rosa + 1
-                contador += 1
+                dados_brutos.append(float(limpo.replace(",", ".")))
             except: pass
-        if len(novo_historico) >= 6:
-            for i in range(5, len(novo_historico)):
-                novos_padroes.append({"padrao": brain.gerar_padrao(novo_historico[i-5:i]), "resultado": novo_historico[i]})
+            
+        # Filtra o tamanho do vetor baseado no bloco selecionado para evitar Overfitting
+        if bloco_opcao == "Bloco 1 (Velas 1 a 10.000)":
+            novo_historico = dados_brutos[:10000]
+            st.session_state.bloco_validacao = "BLOCO 1 (TREINO)"
+        elif bloco_opcao == "Bloco 2 (Velas 10.001 a 15.000 - Fora da Amostra)":
+            novo_historico = dados_brutos[10000:15000]
+            st.session_state.bloco_validacao = "BLOCO 2 (OUT-OF-SAMPLE)"
+        elif bloco_opcao == "Bloco 3 (Velas 15.001 a 20.000 - Fora da Amostra)":
+            novo_historico = dados_brutos[15000:20000]
+            st.session_state.bloco_validacao = "BLOCO 3 (OUT-OF-SAMPLE)"
+        else:
+            novo_historico = dados_brutos
+            st.session_state.bloco_validacao = "COMPLETO"
+
+        novos_padroes, dist_rosa = [], 0
+        for i, valor in enumerate(novo_historico):
+            dist_rosa = 0 if valor >= 10 else dist_rosa + 1
+            if i >= 5:
+                novos_padroes.append({"padrao": brain.gerar_padrao(novo_historico[i-5:i]), "resultado": valor})
+                
         st.session_state.historico = novo_historico
         st.session_state.banco_padroes = novos_padroes
         st.session_state.distancia_rosa = dist_rosa
         salvar_memoria()
-        st.success(f"🔥 Sincronizado: {contador} rodadas integradas!")
+        st.success(f"🔥 Laboratório Carregado: {len(novo_historico)} rodadas ativadas na partição {st.session_state.bloco_validacao}!")
         st.rerun()
 
-def analisar_banco():
+def analisar_banco_avancado(padrao_alvo):
+    total_p = wins_p = loss_p = 0
+    resultados_recentes_padrao = []
+    
+    for reg in st.session_state.banco_padroes:
+        pad = reg["padrao"]
+        if pad == padrao_alvo:
+            total_p += 1
+            if reg["resultado"] >= 2:
+                wins_p += 1
+                resultados_recentes_padrao.append(1)
+            else:
+                loss_p += 1
+                resultados_recentes_padrao.append(0)
+                
+    winrate_historico = (wins_p / total_p) * 100 if total_p > 0 else 0.0
+    janela_degradacao = resultados_recentes_padrao[-5:]
+    winrate_recente = (janela_degradacao.count(1) / len(janela_degradacao)) * 100 if janela_degradacao else 100.0
+    
+    return total_p, winrate_historico, winrate_recente
+
+def analisar_banco_global():
     memoria = {}
     for reg in st.session_state.banco_padroes:
         pad = reg["padrao"]
@@ -134,7 +201,8 @@ if len(st.session_state.historico) >= 30:
     
     aceleracoes = brain.detectar_aceleracao(st.session_state.historico)
     
-    banco = analisar_banco()
+    ocorrencias, winrate_padrao, winrate_recente_padrao = analisar_banco_avancado(padrao_atual)
+    banco_global = analisar_banco_global()
     
     historico_quente = st.session_state.historico[-120:]
     banco_quente = {}
@@ -147,13 +215,12 @@ if len(st.session_state.historico) >= 30:
                 if historico_quente[i] >= 2: banco_quente[pad]["roxa"] += 1
                 if historico_quente[i] >= 10: banco_quente[pad]["rosa"] += 1
 
-    tx_roxa = tx_rosa = tx_roxa_quente = tx_rosa_quente = ocorrencias = ocorrencias_q = 0
+    tx_roxa = tx_rosa = tx_roxa_quente = tx_rosa_quente = 0
     
-    if padrao_atual in banco:
-        dados_p = banco[padrao_atual]
-        ocorrencias = dados_p["total"]
-        tx_roxa = (dados_p["roxa"] / ocorrencias) * 100
-        tx_rosa = (dados_p["rosa"] / ocorrencias) * 100
+    if padrao_atual in banco_global:
+        dados_p = banco_global[padrao_atual]
+        tx_roxa = (dados_p["roxa"] / ocorrencias) * 100 if ocorrencias > 0 else 0
+        tx_rosa = (dados_p["rosa"] / ocorrencias) * 100 if ocorrencias > 0 else 0
         
     if padrao_atual in banco_quente:
         dados_q = banco_quente[padrao_atual]
@@ -165,7 +232,11 @@ if len(st.session_state.historico) >= 30:
     tx_roxa_final = (tx_roxa * peso_historico) + (tx_roxa_quente * peso_quente)
     tx_rosa_final = (tx_rosa * peso_historico) + (tx_rosa_quente * peso_quente)
     
-    adaptive_score = brain.calcular_score_adaptive(st.session_state.historico, tx_roxa_final, tx_rosa_final, ocorrencias, st.session_state.ultimos_resultados, janela_ativa)
+    adaptive_score = brain.calcular_score_adaptive(
+        st.session_state.historico, tx_roxa_final, tx_rosa_final, 
+        ocorrencias, winrate_padrao, winrate_recente_padrao, 
+        st.session_state.ultimos_resultados, janela_ativa
+    )
     
     if st.session_state.distancia_rosa <= 5: faixa_rosa = "CURTA"
     elif st.session_state.distancia_rosa <= 12: faixa_rosa = "MEDIA"
@@ -190,10 +261,7 @@ if len(st.session_state.historico) >= 30:
     mercado_favoravel = tx_roxa_quente >= 58 and radar_score >= 65
     
     exaustao_detectada = brain.detectar_exaustao(st.session_state.historico)
-    if exaustao_detectada:
-        adaptive_score = max(adaptive_score - 10, 0)
-        radar_score = max(radar_score - 8, 0)
-        
+    
     bonus_aceleracao = 0
     if aceleracoes["roxa"]:
         bonus_aceleracao += 4
@@ -205,27 +273,43 @@ if len(st.session_state.historico) >= 30:
         bonus_aceleracao += 4
         
     adaptive_score = min(adaptive_score + min(bonus_aceleracao, 8), 100)
+    
+    janela_20 = st.session_state.ultimos_resultados[-20:] if st.session_state.ultimos_resultados else []
+    eficiencia_recente = janela_20.count("WIN") / len(janela_20) if janela_20 else 1.0
+    if eficiencia_recente < 0.40:
+        adaptive_score = max(adaptive_score - 20, 0)
         
-    # ⚠️ AJUSTE STRATÉGICO 2: AMORTECEDOR DE MERCADO FAVORÁVEL REDUZIDO DE +6 PARA +4
     if mercado_favoravel: adaptive_score = min(adaptive_score + 4, 100)
     if mercado_instavel: adaptive_score = max(adaptive_score - 10, 0)
-    if exaustao_detectada: adaptive_score = max(adaptive_score - 6, 0)
     
     adaptive_score = max(min(adaptive_score, 100), 0)
     radar_score = max(min(radar_score, 100), 0)
     expansion_score = max(min(expansion_score, 100), 0)
     
-    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel)
+    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel, st.session_state.historico)
     
     if "ELITE" in sinal_final and score_final < 68:
         score_final = 68
+        
+    if st.session_state.modo_defensivo and st.session_state.cooldown_rodadas > 0:
+        sinal_final = f"🚫 COOLDOWN SHIELD ATIVO ({st.session_state.cooldown_rodadas} rds)"
+        score_final = 0
+        st.session_state.sinais_ignorados += 1
+        
+    rm = brain.RiskManager()
+    risco_ruina_status = rm.calcular_risco_ruina(st.session_state.acertos, st.session_state.erros, st.session_state.max_loss_streak)
         
     st.session_state.ultima_entrada = sinal_final
     st.session_state.ultimo_contexto = contexto_chave
 else:
     sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, tx_rosa, tx_roxa_quente, tx_rosa_quente, padrao_atual, adaptive_score = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, 0, 0, 0, "---", 0
     exaustao_detectada = False
+    winrate_padrao = winrate_recente_padrao = 100.0
+    eficiencia_recente = 1.0
+    risco_ruina_status = "COLETANDO"
     aceleracoes = {"roxa": False, "rosa": False, "densidade": False}
+
+st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:#7c3aed;font-size:14px;"><b>PARTIÇÃO DE ENGENHARIA ATIVA:</b> {st.session_state.bloco_validacao}</p></div>', unsafe_allow_html=True)
 
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
@@ -242,11 +326,21 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             is_rosa_signal = False
             
         if ("ELITE" in sinal_ativo or "CHANCE" in sinal_ativo or "ROSA" in sinal_ativo):
+            if padrao_atual not in st.session_state.padroes_db:
+                st.session_state.padroes_db[padrao_atual] = {"wins": 0, "loss": 0, "ultimo_winrate": 0.0}
+                
             if not deu_green:
                 tempo_quarentena = 10 if is_rosa_signal else 25
                 st.session_state.quarentena[st.session_state.ultimo_contexto] = tempo_quarentena
                 st.session_state.erros += 1
                 st.session_state.ultimos_resultados.append("LOSS")
+                st.session_state.perdas_consecutivas += 1
+                
+                st.session_state.padroes_db[padrao_atual]["loss"] += 1
+                
+                if st.session_state.perdas_consecutivas >= 4:
+                    st.session_state.modo_defensivo = True
+                    st.session_state.cooldown_rodadas = 15
                 
                 ctx_errado = st.session_state.ultimo_contexto
                 if ctx_errado not in st.session_state.memoria_negativa: st.session_state.memoria_negativa[ctx_errado] = 0
@@ -256,12 +350,33 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
                 if st.session_state.ultimo_contexto not in st.session_state.memoria_positiva: st.session_state.memoria_positiva.append(st.session_state.ultimo_contexto)
                 st.session_state.acertos += 1
                 st.session_state.ultimos_resultados.append("WIN")
+                st.session_state.perdas_consecutivas = 0
+                st.session_state.modo_defensivo = False
+                st.session_state.cooldown_rodadas = 0
+                
+                st.session_state.padroes_db[padrao_atual]["wins"] += 1
+                
+            p_total = st.session_state.padroes_db[padrao_atual]["wins"] + st.session_state.padroes_db[padrao_atual]["loss"]
+            st.session_state.padroes_db[padrao_atual]["ultimo_winrate"] = round((st.session_state.padroes_db[padrao_atual]["wins"] / p_total) * 100, 1)
+                
+        saldo = 1000.0 + (st.session_state.acertos * 10.0) - (st.session_state.erros * 10.0)
+        if "max_drawdown_calc" not in st.session_state: st.session_state.max_drawdown_calc = 0.0
+        dd_atual = (1000.0 - saldo) / 1000.0 if saldo < 1000.0 else 0.0
+        if dd_atual > st.session_state.max_drawdown_calc: st.session_state.max_drawdown_calc = dd_atual
+        
+        if st.session_state.max_drawdown_calc >= 0.15 and not st.session_state.modo_defensivo:
+            st.session_state.modo_defensivo = True
+            st.session_state.cooldown_rodadas = 15
                 
         if len(st.session_state.ultimos_resultados) > 50: st.session_state.ultimos_resultados.pop(0)
 
     if len(st.session_state.historico) >= 5: st.session_state.banco_padroes.append({"padrao": brain.gerar_padrao(st.session_state.historico), "resultado": vela})
     st.session_state.historico.append(vela)
     st.session_state.distancia_rosa = 0 if vela >= 10 else st.session_state.distancia_rosa + 1
+    
+    if st.session_state.perdas_consecutivas > st.session_state.max_loss_streak:
+        st.session_state.max_loss_streak = st.session_state.perdas_consecutivas
+        
     salvar_memoria()
     st.write(f"Vela {vela} processada com sucesso!")
     st.rerun()
@@ -270,7 +385,7 @@ cor_card = "red-card"
 if "CHANCE ELITE" in sinal_final: cor_card = "green-card"
 elif "ROSA ELITE" in sinal_final: cor_card = "blue-card"
 elif "OBSERVANDO" in sinal_final: cor_card = "gold-card"
-elif "⚠️" in sinal_final: cor_card = "red-card"
+elif "⚠️" in sinal_final or "🚫" in sinal_final or "🛑" in sinal_final: cor_card = "red-card"
 
 st.markdown(f'<div class="{cor_card}"><h1 style="text-align:center;font-size:38px;margin:0;">{sinal_final}</h1><p style="text-align:center;margin:5px 0 0 0;font-size:18px;"><b>FORÇA DO CONSENSO IA:</b> {score_final}% | <b>PADRÃO ATUAL:</b> {padrao_atual}</p></div>', unsafe_allow_html=True)
 
@@ -279,19 +394,15 @@ col1, col2 = st.columns(2)
 with col1:
     st.markdown(f"**🛡️ Cérebro Defensivo (Fase Macro):** {fase_macro}")
     st.markdown(f"**⚡ Radar Rosa (Micro Pressão):** {radar_score}%")
-    st.markdown(f"**📊 Ocorrências Mapeadas (Total):** {ocorrencias}")
+    st.markdown(f"**📉 Winrate Histórico do Padrão:** {winrate_padrao:.1f}%")
     st.markdown(f"**📉 Taxa Roxa Global:** {tx_roxa:.1f}%")
     st.markdown(f"**🔥 Taxa Roxa Quente:** {tx_roxa_quente:.1f}%")
-    st.markdown(f"**⚡ Aceleração Roxa:** {'⚡ SIM' if aceleracoes['roxa'] else '❌ NÃO'}")
-    st.markdown(f"**🔥 Aceleração Densidade:** {'🔥 SIM' if aceleracoes['densidade'] else '❌ NÃO'}")
 with col2:
     st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
     st.markdown(f"**🧬 Força Base (Core Adaptive):** {adaptive_score}%")
-    st.markdown(f"**🌸 Taxa Rosa Global:** {tx_rosa:.1f}%")
-    st.markdown(f"**🌸 Taxa Rosa Quente:** {tx_rosa_quente:.1f}%")
-    st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rodadas")
-    st.markdown(f"**🛡️ Exaustão Detectada:** {'💥 SIM' if exaustao_detectada else '🟢 NÃO'}")
-    st.markdown(f"**🌸 Aceleração Rosa:** {'🌸 SIM' if aceleracoes['rosa'] else '❌ NÃO'}")
+    st.markdown(f"**🥀 Winrate Recente do Padrão (Degradação):** {winrate_recente_padrao:.1f}%")
+    st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rds")
+    st.markdown(f"**🛡️ Exaustão Detected:** {'💥 SIM' if exaustao_detectada else '🟢 NÃO'}")
 
 if len(st.session_state.historico) > 0:
     st.markdown('<div class="main-card"><h3>📊 MONITOR DE FLUXO EM TEMPO REAL</h3></div>', unsafe_allow_html=True)
@@ -299,30 +410,31 @@ if len(st.session_state.historico) > 0:
     velas_texto = " → ".join([f"**[{v}]**" for v in ultimas_velas])
     st.markdown(f"<p style='font-size:18px;color:#00ff66;line-height:1.6;'>{velas_texto}</p>", unsafe_allow_html=True)
 
-if st.session_state.memoria_positiva:
-    with st.expander(f"🌟 MEMÓRIA POSITIVA ATIVA ({len(st.session_state.memoria_positiva)}/300 PADRÕES ATIVOS)", expanded=False):
-        for ctx in st.session_state.memoria_positiva[-10:]:
-            st.markdown(f"💎 **Contexto Composto:** `{ctx}` (+8% Score bônus)")
-
-if st.session_state.quarentena:
-    st.markdown('<div class="blue-card"><h3>❄️ CONTEXTOS EM QUARENTENA ATIVA (PENALIDADE GRADUAL)</h3></div>', unsafe_allow_html=True)
-    for ctx, rds in st.session_state.quarentena.items():
-        peso_penalidade = min(rds * 2, 30)
-        st.write(f"🚫 **Geladeira:** `{ctx}` → Restam **{rds}** rodadas (Penalidade Ativa: -{peso_penalidade}%)")
-
 total = st.session_state.acertos + st.session_state.erros
 assertividade = (st.session_state.acertos / total) * 100 if total > 0 else 0
-st.markdown('<div class="gold-card"><h3 style="text-align:center;">👑 PERFORMANCE GLOBAL MULTICAMADAS</h3></div>', unsafe_allow_html=True)
+st.markdown('<div class="gold-card"><h3 style="text-align:center;">📊 ENGINE DE VALIDAÇÃO QUANTITATIVA AVANÇADA</h3></div>', unsafe_allow_html=True)
 c1, c2, c3 = st.columns(3)
-with c1: st.metric("✅ GREEN ACERTOS", st.session_state.acertos)
-with c2: st.metric("❌ REDS COLETADOS", st.session_state.erros)
-with c3: st.metric("📊 ASSERTIVIDADE LÍQUIDA", f"{assertividade:.1f}%")
+with c1: 
+    st.metric("✅ ACERTOS MASTER", st.session_state.acertos)
+    st.metric("📈 DRAWDOWN HISTÓRICO", f"{st.session_state.max_drawdown_calc*100:.2f}%")
+with c2: 
+    st.metric("❌ ERROS MASTER", st.session_state.erros)
+    st.metric("💀 MÁXIMA SEQUÊNCIA LOSS", st.session_state.max_loss_streak)
+with c3: 
+    st.metric("📊 TAXA ACERTO GLOBAL", f"{assertividade:.1f}%")
+    st.metric("🛡️ RISCO DE RUÍNA", risco_ruina_status)
+
+if st.session_state.padroes_db:
+    with st.expander("📚 FILTRAGEM INTELIGENTE - BANCO DE PADRÕES ATIVOS (PERSISTENTE)", expanded=False):
+        for pad, stats in st.session_state.padroes_db.items():
+            st.markdown(f"🔹 **Padrão:** `{pad}` | 🟢 Wins: **{stats['wins']}** | 🔴 Loss: **{stats['loss']}** | 📊 Winrate: **{stats['ultimo_winrate']}%**")
 
 st.markdown(f"<p style='color:#666;text-align:center;font-size:12px;'>Base Total Ativa: {len(st.session_state.historico)} rodadas.</p>", unsafe_allow_html=True)
 
 if st.button("RESETAR ECOSSISTEMA TOTAL"):
     if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
     st.session_state.historico, st.session_state.banco_padroes, st.session_state.distancia_rosa, st.session_state.acertos, st.session_state.erros, st.session_state.ultimos_resultados, st.session_state.quarentena, st.session_state.memoria_positiva, st.session_state.memoria_negativa = [], [], 0, 0, 0, [], {}, [], {}
+    st.session_state.perdas_consecutivas, st.session_state.max_loss_streak, st.session_state.modo_defensivo, st.session_state.cooldown_rodadas, st.session_state.sinais_ignorados, st.session_state.max_drawdown_calc, st.session_state.padroes_db, st.session_state.bloco_validacao = 0, 0, False, 0, 0, 0.0, {}, "NENHUM"
     st.session_state.ultima_entrada = None
     st.session_state.ultimo_contexto = None
     salvar_memoria()
