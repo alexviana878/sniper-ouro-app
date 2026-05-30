@@ -1,7 +1,7 @@
 # brain.py
 # =========================================================
-# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.5.1
-# STATUS: INDENTATION FIX & LOGIC FROZEN FOR VALIDATION
+# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.5.2
+# STATUS: CONGELADO TOTAL / INDENTAÇÃO BLINDADA
 # =========================================================
 
 def classificar_vela(valor):
@@ -184,4 +184,7 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
 
     if tx_roxa_quente_ctx < 38.0 and radar_score < 45: return "⚠️ PRESSÃO FRACA", int(score_final)
     if expansion_score >= 88 and adaptive_score >= 78 and tx_roxa_quente_ctx >= 55: return "🌸 ROSA ELITE", int(score_final)
-    if adaptive_score >= 68 and radar_score >= 58 and tx_roxa_quente_ctx >= 48: return "🟢 CHANCE ELITE", int(score_final
+    if adaptive_score >= 68 and radar_score >= 58 and tx_roxa_quente_ctx >= 48: return "🟢 CHANCE ELITE", int(score_final)
+    if adaptive_score >= 58: return "🟡 OBSERVANDO", int(score_final)
+
+    return "🔴 AGUARDAR", int(score_final)
