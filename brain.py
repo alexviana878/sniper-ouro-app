@@ -1,7 +1,7 @@
 # brain.py
 # =========================================================
-# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.4.1
-# STATUS: CORREÇÃO DE SINTAXE E TRAVA COMPORTAMENTAL
+# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.5
+# RECURSOS: TAXA QUENTE CONTEXTUAL, RADAR GRADUAL & CONVERGÊNCIA DELTA
 # =========================================================
 
 def classificar_vela(valor):
@@ -25,16 +25,24 @@ def detectar_fase(historico):
     if altos >= 4: return "AGRESSIVA"
     return "NEUTRA"
 
+# =========================================================
+# ⚙️ PRIORIDADE 4: RADAR ROSA GRADUAL (Suavizado para evitar saturação rápida em 100%)
+# =========================================================
 def calcular_pressao_radar(historico, janela_ativa=False):
     janela = historico[-10:] if len(historico) >= 10 else historico
     pressao = 0
     reds = sum(1 for x in janela if x < 2)
     baixos = sum(1 for x in janela if x < 1.5)
 
-    if reds >= 3: pressao += 20
-    if reds >= 5: pressao += 40
-    if baixos >= 3: pressao += 20
-    if janela_ativa: pressao += 20
+    # Escala de pontuação gradual para gerar meio-termo real (24%, 45%, 70%...)
+    if reds >= 7: pressao += 35
+    elif reds >= 5: pressao += 25
+    elif reds >= 3: pressao += 15
+
+    if baixos >= 5: pressao += 25
+    elif baixos >= 3: pressao += 15
+
+    if janela_ativa: pressao += 15
 
     return min(pressao, 100)
 
@@ -42,7 +50,7 @@ def calcular_compressao(historico):
     janela = historico[-15:] if len(historico) >= 15 else historico
     reds = sum(1 for x in janela if x < 2)
     medios = sum(1 for x in janela if 2 <= x < 5)
-    altos = sum(1 for x in janela if x >= 10)
+    altos = sum(1 for x in filename_or_history if x >= 10) if 'filename_or_history' in locals() else sum(1 for x in janela if x >= 10)
     score = 0
 
     if reds >= 8: score += 30
@@ -120,113 +128,3 @@ def calcular_eficiencia_recente(ultimos_resultados):
 # =========================================================
 class RiskManager:
     def __init__(self):
-        self.loss_streak = 0
-        self.max_loss_streak = 0
-        self.pause_mode = False
-        self.cooldown_rodadas = 0
-        self.saldo_virtual = 1000.0
-        self.topo_saldo = 1000.0
-        self.drawdown = 0.0
-
-    def calcular_risco_ruina(self, acertos, erros, max_loss):
-        total = acertos + erros
-        if total < 10 or max_loss == 0: 
-            return "BAIXO (COLETANDO DATA)"
-        
-        winrate = acertos / total
-        if winrate >= 0.60 and max_loss <= 3:
-            return "💎 SEGURO (MÍNIMO)"
-        elif winrate >= 0.50 and max_loss <= 5:
-            return "🟡 MODERADO (MÉDIO)"
-        elif winrate < 0.45 or max_loss >= 6:
-            return "🚨 ALTO (RISCO DE QUEBRA)"
-        return "NEUTRO"
-
-# =========================================================
-# SCORE ADAPTATIVO CONTEXTUAL v10.4.1
-# =========================================================
-def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, winrate_padrao, winrate_recente_padrao, ultimos_resultados, janela_ativa=False):
-    score = 0
-    fase = detectar_fase(historico)
-    pressao_radar = calcular_pressao_radar(historico, janela_ativa)
-    eficiencia_recente = calcular_eficiencia_recente(ultimos_resultados)
-
-    if len(historico) >= 10:
-        reds_curto_5 = sum(1 for x in historico[-5:] if x < 2)
-        reds_medio_7 = sum(1 for x in historico[-7:] if x < 2)
-        reds_longo_10 = sum(1 for x in historico[-10:] if x < 2)
-
-        if reds_curto_5 >= 4: score += 10
-        if reds_medio_7 >= 5: score += 10
-        if reds_longo_10 >= 8: score += 15
-
-    if taxa_roxa >= 90: score += 25
-    elif taxa_roxa >= 80: score += 20
-    elif taxa_roxa >= 70: score += 15
-
-    if taxa_rosa >= 20: score += 15
-
-    if ocorrencias >= 30 and winrate_padrao >= 55.0: score += 20
-    elif ocorrencias >= 20 and winrate_padrao >= 50.0: score += 15
-    elif ocorrencias >= 10 and winrate_padrao >= 45.0: score += 10
-
-    # Relevância da Densidade Roxa das últimas 15 rodadas
-    ultimas15 = historico[-15:] if len(historico) >= 15 else historico
-    densidade_roxa = sum(1 for x in ultimas15 if x >= 2)
-    if densidade_roxa >= 9: score += 15
-    elif densidade_roxa <= 4: score -= 15
-
-    score += pressao_radar * 0.35
-    if fase == "DEFENSIVA": score -= 15
-
-    if eficiencia_recente >= 0.70: score += 15
-    elif eficiencia_recente <= 0.45: score -= 20
-
-    if winrate_recente_padrao < 45.0 and ocorrencias >= 5:
-        score -= 25
-
-    if detectar_exaustao(historico): score -= 20
-
-    return min(max(int(score), 0), 100)
-
-# =========================================================
-# CONSENSO DINÂMICO COOLDOWN SHIELD v10.4.1
-# =========================================================
-def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel, historico, winrate_padrao, winrate_recente_padrao):
-    if detectar_exaustao(historico):
-        return "🛑 EXAUSTÃO DELTA", 0
-
-    if mercado_instavel:
-        return "⚠️ MERCADO INSTÁVEL", 0
-
-    # Detector de Mudança de Regime (Degradação Acelerada)
-    if winrate_padrao >= 50.0 and winrate_recente_padrao <= 25.0:
-        return "⚠️ DEGRADAÇÃO ACELERADA", 0
-
-    peso_adaptive = 0.50
-    peso_radar = 0.30
-    peso_expansion = 0.20
-
-    if expansion_score >= 75:
-        peso_expansion = 0.30
-        peso_adaptive = 0.40
-
-    if radar_score >= 80:
-        peso_radar = 0.40
-        peso_adaptive = 0.40
-
-    score_final = (adaptive_score * peso_adaptive) + (radar_score * peso_radar) + (expansion_score * peso_expansion)
-
-    if tx_roxa_quente < 38 and radar_score < 50:
-        return "⚠️ PRESSÃO FRACA", int(score_final)
-
-    if expansion_score >= 88 and adaptive_score >= 78 and tx_roxa_quente >= 58:
-        return "🌸 ROSA ELITE", int(score_final)
-
-    if adaptive_score >= 68 and radar_score >= 58 and tx_roxa_quente >= 48:
-        return "🟢 CHANCE ELITE", int(score_final)
-
-    if adaptive_score >= 58:
-        return "🟡 OBSERVANDO", int(score_final)
-
-    return "🔴 AGUARDAR", int(score_final)
