@@ -47,7 +47,8 @@ def carregar_memoria():
         "acertos": 0, "erros": 0, "ultimos_resultados": [], 
         "quarentena": {}, "memoria_positiva": [], "memoria_negativa": {},
         "perdas_consecutivas": 0, "max_loss_streak": 0, "modo_defensivo": False, "cooldown_rodadas": 0, "sinais_ignorados": 0,
-        "padroes_db": {}, "max_drawdown_calc": 0.0, "bloco_validacao": "NENHUM"
+        "padroes_db": {}, "max_drawdown_calc": 0.0, "bloco_validacao": "NENHUM",
+        "score_medio": 0, "total_operacoes": 0
     }
 
 def salvar_memoria():
@@ -68,7 +69,9 @@ def salvar_memoria():
         "sinais_ignorados": st.session_state.sinais_ignorados,
         "padroes_db": st.session_state.padroes_db,
         "max_drawdown_calc": st.session_state.max_drawdown_calc,
-        "bloco_validacao": st.session_state.bloco_validacao
+        "bloco_validacao": st.session_state.bloco_validacao,
+        "score_medio": st.session_state.score_medio,
+        "total_operacoes": st.session_state.total_operacoes
     }
     with open(ARQUIVO_MEMORIA, "w") as f: json.dump(dados, f)
 
@@ -91,6 +94,8 @@ if "dados_carregados" not in st.session_state:
     st.session_state.padroes_db = dados.get("padroes_db", {})
     st.session_state.max_drawdown_calc = dados.get("max_drawdown_calc", 0.0)
     st.session_state.bloco_validacao = dados.get("bloco_validacao", "NENHUM")
+    st.session_state.score_medio = dados.get("score_medio", 0)
+    st.session_state.total_operacoes = dados.get("total_operacoes", 0)
     st.session_state.ultima_entrada = None
     st.session_state.ultimo_contexto = None
     st.session_state.dados_carregados = True
@@ -98,9 +103,8 @@ if "dados_carregados" not in st.session_state:
 if st.session_state.quarentena:
     nova_quarentena = {}
     for ctx, rodadas in st.session_state.quarentena.items():
+        # Decaimento padrão linear para esvaziar a geladeira de forma controlada
         decaimento = 2
-        if "_A_" in ctx or "_E_" in ctx or ctx.startswith("A-") or ctx.startswith("E-"):
-            decaimento = 3
         nova = rodadas - decaimento
         if nova > 0: nova_quarentena[ctx] = nova
     st.session_state.quarentena = nova_quarentena
@@ -119,7 +123,6 @@ st.markdown(f'<div class="clock-card"><h2 style="color:#00ff66 !important;margin
 
 st.title("🎯 SNIPER OURO IA - LAB DE VALIDAÇÃO G9")
 
-# ⚠️ ENGINE DE PREVÊNÇÃO DE OVERFITTING: SELEÇÃO DE BLOCO DE VALIDAÇÃO WALK-FORWARD
 with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expanded=False):
     bloco_opcao = st.radio("Escolha a partição de dados para testar sobrevivência:", ["Carga Completa (Sem Divisão)", "Bloco 1 (Velas 1 a 10.000)", "Bloco 2 (Velas 10.001 a 15.000 - Fora da Amostra)", "Bloco 3 (Velas 15.001 a 20.000 - Fora da Amostra)"])
     arquivo = st.file_uploader("Suba o arquivo master de dados", type=["csv","txt"])
@@ -135,7 +138,6 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
                 dados_brutos.append(float(limpo.replace(",", ".")))
             except: pass
             
-        # Filtra o tamanho do vetor baseado no bloco selecionado para evitar Overfitting
         if bloco_opcao == "Bloco 1 (Velas 1 a 10.000)":
             novo_historico = dados_brutos[:10000]
             st.session_state.bloco_validacao = "BLOCO 1 (TREINO)"
@@ -253,8 +255,9 @@ if len(st.session_state.historico) >= 30:
         
     adaptive_score = max(adaptive_score - penalidade_quarentena, 0)
     
+    # ⚠️ PRIORIDADE Nº 3: CICATRIZ NEGATIVA MAIS PESADA (Aumentado multiplicador de 1.5 para 2.5)
     peso_cicatriz = st.session_state.memoria_negativa.get(contexto_chave, 0)
-    adaptive_score -= min(peso_cicatriz * 1.5, 18)
+    adaptive_score -= min(peso_cicatriz * 2.5, 25)
     adaptive_score = max(adaptive_score, 0)
     
     mercado_instavel = tx_roxa_quente < 38 and radar_score < 50 and expansion_score < 48
@@ -286,7 +289,8 @@ if len(st.session_state.historico) >= 30:
     radar_score = max(min(radar_score, 100), 0)
     expansion_score = max(min(expansion_score, 100), 0)
     
-    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel, st.session_state.historico)
+    # ⚠️ Chamada do consenso recebendo as taxas para o Detector de Regime
+    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel, st.session_state.historico, winrate_padrao, winrate_recente_padrao)
     
     if "ELITE" in sinal_final and score_final < 68:
         score_final = 68
@@ -298,6 +302,10 @@ if len(st.session_state.historico) >= 30:
         
     rm = brain.RiskManager()
     risco_ruina_status = rm.calcular_risco_ruina(st.session_state.acertos, st.session_state.erros, st.session_state.max_loss_streak)
+    
+    # Cálculo local da Densidade Roxa das últimas 15 velas
+    ultimas15 = st.session_state.historico[-15:] if len(st.session_state.historico) >= 15 else st.session_state.historico
+    densidade_roxa_v = sum(1 for x in ultimas15 if x >= 2)
         
     st.session_state.ultima_entrada = sinal_final
     st.session_state.ultimo_contexto = contexto_chave
@@ -307,6 +315,7 @@ else:
     winrate_padrao = winrate_recente_padrao = 100.0
     eficiencia_recente = 1.0
     risco_ruina_status = "COLETANDO"
+    densidade_roxa_v = 0
     aceleracoes = {"roxa": False, "rosa": False, "densidade": False}
 
 st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:#7c3aed;font-size:14px;"><b>PARTIÇÃO DE ENGENHARIA ATIVA:</b> {st.session_state.bloco_validacao}</p></div>', unsafe_allow_html=True)
@@ -326,11 +335,15 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             is_rosa_signal = False
             
         if ("ELITE" in sinal_ativo or "CHANCE" in sinal_ativo or "ROSA" in sinal_ativo):
+            st.session_state.total_operacoes += 1
+            st.session_state.score_medio = int(((st.session_state.score_medio * (st.session_state.total_operacoes - 1)) + score_final) / st.session_state.total_operacoes)
+            
             if padrao_atual not in st.session_state.padroes_db:
                 st.session_state.padroes_db[padrao_atual] = {"wins": 0, "loss": 0, "ultimo_winrate": 0.0}
                 
             if not deu_green:
-                tempo_quarentena = 10 if is_rosa_signal else 25
+                # ⚠️ PRIORIDADE Nº 3: QUARENTENA REFORÇADA (De 25 para 45 rodadas de congelamento)
+                tempo_quarentena = 15 if is_rosa_signal else 45
                 st.session_state.quarentena[st.session_state.ultimo_contexto] = tempo_quarentena
                 st.session_state.erros += 1
                 st.session_state.ultimos_resultados.append("LOSS")
@@ -397,6 +410,8 @@ with col1:
     st.markdown(f"**📉 Winrate Histórico do Padrão:** {winrate_padrao:.1f}%")
     st.markdown(f"**📉 Taxa Roxa Global:** {tx_roxa:.1f}%")
     st.markdown(f"**🔥 Taxa Roxa Quente:** {tx_roxa_quente:.1f}%")
+    # ⚠️ Exibição da métrica de Densidade Roxa das últimas 15 rodadas
+    st.markdown(f"**⚡ Densidade Roxa (Últimas 15 rds):** {densidade_roxa_v}/15")
 with col2:
     st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
     st.markdown(f"**🧬 Força Base (Core Adaptive):** {adaptive_score}%")
@@ -417,9 +432,11 @@ c1, c2, c3 = st.columns(3)
 with c1: 
     st.metric("✅ ACERTOS MASTER", st.session_state.acertos)
     st.metric("📈 DRAWDOWN HISTÓRICO", f"{st.session_state.max_drawdown_calc*100:.2f}%")
+    st.metric("📊 SCORE MÉDIO SINAIS", f"{st.session_state.score_medio}%")
 with c2: 
     st.metric("❌ ERROS MASTER", st.session_state.erros)
     st.metric("💀 MÁXIMA SEQUÊNCIA LOSS", st.session_state.max_loss_streak)
+    st.metric("🎯 TOTAL OPERAÇÕES EMITIDAS", st.session_state.total_operacoes)
 with c3: 
     st.metric("📊 TAXA ACERTO GLOBAL", f"{assertividade:.1f}%")
     st.metric("🛡️ RISCO DE RUÍNA", risco_ruina_status)
@@ -434,7 +451,7 @@ st.markdown(f"<p style='color:#666;text-align:center;font-size:12px;'>Base Total
 if st.button("RESETAR ECOSSISTEMA TOTAL"):
     if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
     st.session_state.historico, st.session_state.banco_padroes, st.session_state.distancia_rosa, st.session_state.acertos, st.session_state.erros, st.session_state.ultimos_resultados, st.session_state.quarentena, st.session_state.memoria_positiva, st.session_state.memoria_negativa = [], [], 0, 0, 0, [], {}, [], {}
-    st.session_state.perdas_consecutivas, st.session_state.max_loss_streak, st.session_state.modo_defensivo, st.session_state.cooldown_rodadas, st.session_state.sinais_ignorados, st.session_state.max_drawdown_calc, st.session_state.padroes_db, st.session_state.bloco_validacao = 0, 0, False, 0, 0, 0.0, {}, "NENHUM"
+    st.session_state.perdas_consecutivas, st.session_state.max_loss_streak, st.session_state.modo_defensivo, st.session_state.cooldown_rodadas, st.session_state.sinais_ignorados, st.session_state.max_drawdown_calc, st.session_state.padroes_db, st.session_state.bloco_validacao, st.session_state.score_medio, st.session_state.total_operacoes = 0, 0, False, 0, 0, 0.0, {}, "NENHUM", 0, 0
     st.session_state.ultima_entrada = None
     st.session_state.ultimo_contexto = None
     salvar_memoria()
