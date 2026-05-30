@@ -1,7 +1,7 @@
 # brain.py
 # =========================================================
-# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.4
-# RECURSOS: DETECTOR DE REGIME, DENSIDADE ROXA & QUARENTENA DELTA
+# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.4.1
+# STATUS: CORREÇÃO DE SINTAXE E TRAVA COMPORTAMENTAL
 # =========================================================
 
 def classificar_vela(valor):
@@ -116,7 +116,7 @@ def calcular_eficiencia_recente(ultimos_resultados):
     return wins / len(janela)
 
 # =========================================================
-# ⚙️ MÓDULO RISK ENGINE
+# MÓDULO RISK ENGINE
 # =========================================================
 class RiskManager:
     def __init__(self):
@@ -143,7 +143,7 @@ class RiskManager:
         return "NEUTRO"
 
 # =========================================================
-# SCORE ADAPTATIVO CONTEXTUAL v10.4
+# SCORE ADAPTATIVO CONTEXTUAL v10.4.1
 # =========================================================
 def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, winrate_padrao, winrate_recente_padrao, ultimos_resultados, janela_ativa=False):
     score = 0
@@ -170,7 +170,7 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, winrat
     elif ocorrencias >= 20 and winrate_padrao >= 50.0: score += 15
     elif ocorrencias >= 10 and winrate_padrao >= 45.0: score += 10
 
-    # ⚠️ PRIORIDADE Nº 2: FORTALECER RELEVÂNCIA DA DENSIDADE ROXA NO SCORE
+    # Relevância da Densidade Roxa das últimas 15 rodadas
     ultimas15 = historico[-15:] if len(historico) >= 15 else historico
     densidade_roxa = sum(1 for x in ultimas15 if x >= 2)
     if densidade_roxa >= 9: score += 15
@@ -190,6 +190,43 @@ def calcular_score_adaptive(historico, taxa_roxa, taxa_rosa, ocorrencias, winrat
     return min(max(int(score), 0), 100)
 
 # =========================================================
-# CONSENSO DINÂMICO COOLDOWN SHIELD v10.4
+# CONSENSO DINÂMICO COOLDOWN SHIELD v10.4.1
 # =========================================================
-def
+def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel, historico, winrate_padrao, winrate_recente_padrao):
+    if detectar_exaustao(historico):
+        return "🛑 EXAUSTÃO DELTA", 0
+
+    if mercado_instavel:
+        return "⚠️ MERCADO INSTÁVEL", 0
+
+    # Detector de Mudança de Regime (Degradação Acelerada)
+    if winrate_padrao >= 50.0 and winrate_recente_padrao <= 25.0:
+        return "⚠️ DEGRADAÇÃO ACELERADA", 0
+
+    peso_adaptive = 0.50
+    peso_radar = 0.30
+    peso_expansion = 0.20
+
+    if expansion_score >= 75:
+        peso_expansion = 0.30
+        peso_adaptive = 0.40
+
+    if radar_score >= 80:
+        peso_radar = 0.40
+        peso_adaptive = 0.40
+
+    score_final = (adaptive_score * peso_adaptive) + (radar_score * peso_radar) + (expansion_score * peso_expansion)
+
+    if tx_roxa_quente < 38 and radar_score < 50:
+        return "⚠️ PRESSÃO FRACA", int(score_final)
+
+    if expansion_score >= 88 and adaptive_score >= 78 and tx_roxa_quente >= 58:
+        return "🌸 ROSA ELITE", int(score_final)
+
+    if adaptive_score >= 68 and radar_score >= 58 and tx_roxa_quente >= 48:
+        return "🟢 CHANCE ELITE", int(score_final)
+
+    if adaptive_score >= 58:
+        return "🟡 OBSERVANDO", int(score_final)
+
+    return "🔴 AGUARDAR", int(score_final)
