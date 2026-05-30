@@ -30,7 +30,7 @@ st.markdown("""
 .red-card { border: 2px solid #ef4444; border-radius: 15px; padding: 15px; background-color: #111827; margin-bottom: 15px; box-shadow: 0 0 12px #ef4444; color: white; }
 .gold-card { border: 2px solid #f59e0b; border-radius: 15px; padding: 15px; background-color: #111827; margin-bottom: 15px; box-shadow: 0 0 12px #f59e0b; color: white; }
 .blue-card { border: 2px solid #3b82f6; border-radius: 15px; padding: 15px; background-color: #111827; margin-bottom: 15px; box-shadow: 0 0 12px #3b82f6; color: white; }
-.debug-card { border: 1px dashed #ef4444; border-radius: 10px; padding: 12px; background-color: #000000; margin-bottom: 15px; color: #ff3333; font-family: monospace; }
+.debug-card { border: 1px dashed #ff9900; border-radius: 10px; padding: 12px; background-color: #000000; margin-bottom: 15px; color: #ff9900; font-family: monospace; line-height: 1.5; }
 .clock-card { border: 1px solid #00ff66; border-radius: 10px; padding: 10px; background-color: #111827; text-align: center; margin-bottom: 15px; }
 h1,h2,h3,p,label { color: white !important; }
 </style>
@@ -121,7 +121,7 @@ janela_ativa = agora.minute in minutos_pagantes
 
 st.markdown(f'<div class="clock-card"><h2 style="color:#00ff66 !important;margin:0;">{agora.strftime("%H:%M:%S")}</h2><p style="margin:0;color:#00ff66 !important;">{"⚠️ JANELA ATIVA DE EXPLOSÃO" if janela_ativa else "ECOSSISTEMA MONITORANDO"}</p></div>', unsafe_allow_html=True)
 
-st.title("🎯 SNIPER OURO IA - LAB DE VALIDAÇÃO G9")
+st.title("🎯 SNIPER OURO IA - TELEMETRIA DE AUDITORIA G9")
 
 with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expanded=False):
     bloco_opcao = st.radio("Escolha a partição de dados para testar sobrevivência:", ["Carga Completa (Sem Divisão)", "Bloco 1 (Velas 1 a 10.000)", "Bloco 2 (Velas 10.001 a 15.000 - Fora da Amostra)", "Bloco 3 (Velas 15.001 a 20.000 - Fora da Amostra)"])
@@ -192,6 +192,9 @@ def analisar_banco_global():
         if reg["resultado"] >= 10: memoria[pad]["rosa"] += 1
     return memoria
 
+# Declaração padrão da auditoria para evitar falha de escopo
+auditoria_dict = {"score_base": 0, "penalidade_fase": 0, "penalidade_eficiencia": 0, "penalidade_degradacao": 0, "penalidade_exaustao": 0}
+
 if len(st.session_state.historico) >= 30:
     padrao_atual = brain.gerar_padrao(st.session_state.historico)
     fase_macro = brain.detectar_fase(st.session_state.historico)
@@ -212,7 +215,8 @@ if len(st.session_state.historico) >= 30:
     roxas_curto = sum(1 for x in ultimas50 if x >= 2)
     tx_roxa_quente_ctx = (roxas_curto / len(ultimas50)) * 100 if ultimas50 else 0.0
     
-    adaptive_score = brain.calcular_score_adaptive(
+    # Capturando a tupla de auditoria profunda da v10.7
+    adaptive_score, auditoria_dict = brain.calcular_score_adaptive(
         st.session_state.historico, tx_roxa, tx_roxa_quente_ctx, 
         ocorrencias, winrate_padrao, winrate_recente_padrao, 
         st.session_state.ultimos_resultados, janela_ativa
@@ -372,18 +376,27 @@ elif "⚠️" in sinal_final or "🚫" in sinal_final or "🛑" in sinal_final: 
 
 st.markdown(f'<div class="{cor_card}"><h1 style="text-align:center;font-size:38px;margin:0;">{sinal_final}</h1><p style="text-align:center;margin:5px 0 0 0;font-size:18px;"><b>FORÇA DO CONSENSO IA:</b> {score_final}% | <b>PADRÃO ATUAL:</b> {padrao_atual}</p></div>', unsafe_allow_html=True)
 
-# ⚠️ INSTRUMENTAÇÃO DA PRIORIDADE Nº 1: PAINEL DE TELEMETRIA COMPLETA DE DEBUG QUANT EM TEMPO REAL
+# 📟 SEÇÃO DE TELEMETRIA INSTRUMENTADA DE PRECISÃO (AUDITORIA DO CORE ADAPTIVE)
 st.markdown("""
 <div class="debug-card">
-    <p style="margin:0; font-size:14px; color:#ff3333; font-weight:bold;">📟 TELEMETRIA EM TEMPO REAL (DEBUG QUANT)</p>
-    <hr style="margin:5px 0; border:0; border-top:1px dashed #ff3333;">
-    • CORE ADAPTIVE SCORE : <b>{}%</b> (Peso: 50%)<br>
-    • MICRO PRESSÃO RADAR: <b>{}%</b> (Peso: 30%)<br>
-    • CÉREBRO DE EXPANSÃO: <b>{}%</b> (Peso: 20%)<br>
-    • TX QUENTE CONTEXTUAL: <b>{:.1f}%</b><br>
-    • CONSENSO CALCULADO : <b>{}%</b>
+    <p style="margin:0; font-size:14px; color:#ff9900; font-weight:bold;">📟 TELEMETRIA AVANÇADA (AUDITORIA INTERNA DO ADAPTIVE)</p>
+    <hr style="margin:5px 0; border:0; border-top:1px dashed #ff9900;">
+    • 🧱 BASE STRUCTURAL SCORE : <b>{} pts</b> (Potencial sem Freios)<br>
+    • 🛑 PENALIDADE EXAUSTÃO  : <span style="color:#ff3333;"><b>-{} pts</b></span><br>
+    • 🥀 PENALIDADE DEGRADAÇÃO: <span style="color:#ff3333;"><b>-{} pts</b></span><br>
+    • 🛡️ PENALIDADE EFICIÊNCIA: <span style="color:#ff3333;"><b>-{} pts</b></span><br>
+    • 🛡️ PENALIDADE FASE MACRO: <span style="color:#ff3333;"><b>-{} pts</b></span><br>
+    <hr style="margin:5px 0; border:0; border-top:1px dashed #ff9900;">
+    • 🧬 CORE ADAPTIVE FINAL  : <b>{}%</b> (Entrada no Consenso)
 </div>
-""".format(adaptive_score, radar_score, expansion_score, tx_roxa_quente_ctx, score_final), unsafe_allow_html=True)
+""".format(
+    auditoria_dict["score_base"], 
+    auditoria_dict["penalidade_exaustao"], 
+    auditoria_dict["penalidade_degradacao"], 
+    auditoria_dict["penalidade_eficiencia"], 
+    auditoria_dict["penalidade_fase"],
+    adaptive_score
+), unsafe_allow_html=True)
 
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 col1, col2 = st.columns(2)
