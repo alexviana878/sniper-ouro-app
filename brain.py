@@ -1,7 +1,7 @@
 # brain.py
 # =========================================================
-# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.6
-# RECURSOS: FLUXO DESTRACADO / DESAFIO DO EXCESSO DE DEFESA
+# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.7
+# RECURSOS: EXPOSIÇÃO DE TELEMETRIA INTERNA DO ADAPTIVE SCORE
 # =========================================================
 
 def classificar_vela(valor):
@@ -64,9 +64,6 @@ def detectar_expansao(historico):
     score += compressao * 0.5
     return min(int(score), 100)
 
-# =========================================================
-# ⚙️ AJUSTE 1: SUAVIZAÇÃO DA EXAUSTÃO (Evitando Falsos Bloqueios)
-# =========================================================
 def detectar_exaustao(historico):
     if len(historico) < 6: return False
     ultimas6 = historico[-6:]
@@ -75,9 +72,9 @@ def detectar_exaustao(historico):
     rosas = len([v for v in ultimas6 if v >= 10])
     baixos = len([v for v in ultimas6 if v <= 1.30])
     
-    if media6 >= 4.5: return True       # Subiu de 3.8 para 4.5
-    if altos >= 4: return True          # Subiu de 3 para 4
-    if rosas >= 3: return True          # Subiu de 2 para 3
+    if media6 >= 4.5: return True       
+    if altos >= 4: return True          
+    if rosas >= 3: return True          
     if baixos >= 5: return True
     return False
 
@@ -97,7 +94,7 @@ def detectar_aceleracao(historico):
     return {"roxa": aceleracao_roxa, "rosa": aceleracao_rosa, "densidade": aceleracao_densidade}
 
 def calcular_eficiencia_recente(ultimos_resultados):
-    if not ultimos_resultados: return 0.0
+    if not ultimos_resultados: return 1.0  # Default neutro/positivo
     janela = ultimos_resultados[-20:]
     wins = janela.count("WIN")
     return wins / len(janela)
@@ -122,62 +119,75 @@ class RiskManager:
         elif winrate < 0.45 or max_loss >= 6: return "🚨 ALTO (RISCO DE QUEBRA)"
         return "NEUTRO"
 
-# =========================================================
-# SCORE ADAPTATIVO CONTEXTUAL v10.6
-# =========================================================
+# =========================================================================
+# AUDITORIA TELEMÉTRICA DO ADAPTIVE SCORE v10.7
+# RETORNA: (score_final, dict_detalhado_de_auditoria)
+# =========================================================================
 def calcular_score_adaptive(historico, taxa_roxa, tx_roxa_quente_ctx, ocorrencias, winrate_padrao, winrate_recente_padrao, ultimos_resultados, janela_ativa=False):
-    score = 0
+    score_base = 0
     fase = detectar_fase(historico)
     pressao_radar = calcular_pressao_radar(historico, janela_ativa)
     eficiencia_recente = calcular_eficiencia_recente(ultimos_resultados)
 
+    # 1. CONSTRUÇÃO DO SCORE BASE (ESTRUTURAL)
     if len(historico) >= 10:
         reds_curto_5 = sum(1 for x in historico[-5:] if x < 2)
         reds_medio_7 = sum(1 for x in historico[-7:] if x < 2)
         reds_longo_10 = sum(1 for x in historico[-10:] if x < 2)
-        if reds_curto_5 >= 4: score += 10
-        if reds_medio_7 >= 5: score += 10
-        if reds_longo_10 >= 8: score += 15
+        if reds_curto_5 >= 4: score_base += 10
+        if reds_medio_7 >= 5: score_base += 10
+        if reds_longo_10 >= 8: score_base += 15
 
-    if tx_roxa_quente_ctx >= 55: score += 25     # Reajustado degrau de 60 para 55
-    elif tx_roxa_quente_ctx >= 45: score += 20   # Reajustado degrau de 50 para 45
-    elif tx_roxa_quente_ctx >= 38: score += 15   # Reajustado degrau de 40 para 38
+    if tx_roxa_quente_ctx >= 55: score_base += 25     
+    elif tx_roxa_quente_ctx >= 45: score_base += 20   
+    elif tx_roxa_quente_ctx >= 38: score_base += 15   
 
-    if taxa_roxa >= 85: score += 15
-    elif taxa_roxa >= 75: score += 10
+    if taxa_roxa >= 85: score_base += 15
+    elif taxa_roxa >= 75: score_base += 10
 
-    if ocorrencias >= 30 and winrate_padrao >= 55.0: score += 20
-    elif ocorrencias >= 20 and winrate_padrao >= 50.0: score += 15
-    elif ocorrencias >= 10 and winrate_padrao >= 45.0: score += 10
+    if ocorrencias >= 30 and winrate_padrao >= 55.0: score_base += 20
+    elif ocorrencias >= 20 and winrate_padrao >= 50.0: score_base += 15
+    elif ocorrencias >= 10 and winrate_padrao >= 45.0: score_base += 10
 
     ultimas15 = historico[-15:] if len(historico) >= 15 else historico
     densidade_roxa = sum(1 for x in ultimas15 if x >= 2)
-    if densidade_roxa >= 9: score += 25
-    elif densidade_roxa <= 4: score -= 20
+    if densidade_roxa >= 9: score_base += 25
+    elif densidade_roxa <= 4: score_base -= 20
 
-    # ⚙️ AJUSTE 2: RECALIBRAGEM DA CONVERGÊNCIA (Taxa roxa global caiu de 45% para 35% para ativar o bônus)
     if densidade_roxa >= 8 and taxa_roxa >= 35.0 and pressao_radar >= 50:
-        score += 20  # Aumentou impacto de +15 para +20
+        score_base += 20  
 
-    score += pressao_radar * 0.35
-    if fase == "DEFENSIVA": score -= 15
+    score_base += int(pressao_radar * 0.35)
 
-    if eficiencia_recente >= 0.70: score += 15
-    elif eficiencia_recente <= 0.45: score -= 20
+    # 2. MAPEAMENTO ISOLADO DE PENALIDADES (FREIOS)
+    penalidade_fase = 15 if fase == "DEFENSIVA" else 0
+    penalidade_eficiencia = 20 if eficiencia_recente <= 0.45 else 0
+    penalidade_degradacao = 25 if (winrate_recente_padrao < 45.0 and ocorrencias >= 5) else 0
+    penalidade_exaustao = 15 if detectar_exaustao(historico) else 0
 
-    if winrate_recente_padrao < 45.0 and ocorrencias >= 5: score -= 25
-    if detectar_exaustao(historico): score -= 15  # Amortecido freio base de -20 para -15
+    # Aplicação dos freios estruturais do brain
+    score_intermediario = score_base - penalidade_fase - penalidade_eficiencia - penalidade_degradacao - penalidade_exaustao
+    score_final = min(max(int(score_intermediario), 0), 100)
 
-    return min(max(int(score), 0), 100)
+    # Dicionário empacotado para a Telemetria da Interface do Streamlit
+    auditoria = {
+        "score_base": score_base,
+        "penalidade_fase": penalidade_fase,
+        "penalidade_eficiencia": penalidade_eficiencia,
+        "penalidade_degradacao": penalidade_degradacao,
+        "penalidade_exaustao": penalidade_exaustao
+    }
+
+    return score_final, auditoria
 
 # =========================================================
-# CONSENSO DINÂMICO DESTACADO v10.6
+# CONSENSO DINÂMICO CONSERVADOR v10.7
 # =========================================================
 def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente_ctx, mercado_instavel, historico, winrate_padrao, winrate_recente_padrao):
     if detectar_exaustao(historico): return "🛑 EXAUSTÃO DELTA", 0
     if mercado_instavel: return "⚠️ MERCADO INSTÁVEL", 0
 
-    if winrate_padrao >= 50.0 and winrate_recente_padrao <= 20.0: # Suavizado limite de 25% para 20%
+    if winrate_padrao >= 50.0 and winrate_recente_padrao <= 20.0: 
         return "⚠️ DEGRADAÇÃO ACELERADA", 0
 
     peso_adaptive = 0.50
@@ -193,7 +203,6 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
 
     score_final = (adaptive_score * peso_adaptive) + (radar_score * peso_radar) + (expansion_score * peso_expansion)
 
-    # ⚙️ AJUSTE 3: GATILHOS DE SINAL REDUZIDOS (Ajustados para a nova calibragem realista)
     if tx_roxa_quente_ctx < 35.0 and radar_score < 35: return "⚠️ PRESSÃO FRACA", int(score_final)
     
     if expansion_score >= 80 and adaptive_score >= 72 and tx_roxa_quente_ctx >= 52: return "🌸 ROSA ELITE", int(score_final)
