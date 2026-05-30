@@ -1,7 +1,7 @@
 # brain.py
 # =========================================================
-# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.5.2
-# STATUS: CONGELADO TOTAL / INDENTAÇÃO BLINDADA
+# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.6
+# RECURSOS: FLUXO DESTRACADO / DESAFIO DO EXCESSO DE DEFESA
 # =========================================================
 
 def classificar_vela(valor):
@@ -64,6 +64,9 @@ def detectar_expansao(historico):
     score += compressao * 0.5
     return min(int(score), 100)
 
+# =========================================================
+# ⚙️ AJUSTE 1: SUAVIZAÇÃO DA EXAUSTÃO (Evitando Falsos Bloqueios)
+# =========================================================
 def detectar_exaustao(historico):
     if len(historico) < 6: return False
     ultimas6 = historico[-6:]
@@ -71,9 +74,10 @@ def detectar_exaustao(historico):
     altos = len([v for v in ultimas6 if v >= 5])
     rosas = len([v for v in ultimas6 if v >= 10])
     baixos = len([v for v in ultimas6 if v <= 1.30])
-    if media6 >= 3.8: return True
-    if altos >= 3: return True
-    if rosas >= 2: return True
+    
+    if media6 >= 4.5: return True       # Subiu de 3.8 para 4.5
+    if altos >= 4: return True          # Subiu de 3 para 4
+    if rosas >= 3: return True          # Subiu de 2 para 3
     if baixos >= 5: return True
     return False
 
@@ -118,6 +122,9 @@ class RiskManager:
         elif winrate < 0.45 or max_loss >= 6: return "🚨 ALTO (RISCO DE QUEBRA)"
         return "NEUTRO"
 
+# =========================================================
+# SCORE ADAPTATIVO CONTEXTUAL v10.6
+# =========================================================
 def calcular_score_adaptive(historico, taxa_roxa, tx_roxa_quente_ctx, ocorrencias, winrate_padrao, winrate_recente_padrao, ultimos_resultados, janela_ativa=False):
     score = 0
     fase = detectar_fase(historico)
@@ -132,12 +139,12 @@ def calcular_score_adaptive(historico, taxa_roxa, tx_roxa_quente_ctx, ocorrencia
         if reds_medio_7 >= 5: score += 10
         if reds_longo_10 >= 8: score += 15
 
-    if tx_roxa_quente_ctx >= 60: score += 25
-    elif tx_roxa_quente_ctx >= 50: score += 20
-    elif tx_roxa_quente_ctx >= 40: score += 15
+    if tx_roxa_quente_ctx >= 55: score += 25     # Reajustado degrau de 60 para 55
+    elif tx_roxa_quente_ctx >= 45: score += 20   # Reajustado degrau de 50 para 45
+    elif tx_roxa_quente_ctx >= 38: score += 15   # Reajustado degrau de 40 para 38
 
-    if taxa_roxa >= 90: score += 15
-    elif taxa_roxa >= 80: score += 10
+    if taxa_roxa >= 85: score += 15
+    elif taxa_roxa >= 75: score += 10
 
     if ocorrencias >= 30 and winrate_padrao >= 55.0: score += 20
     elif ocorrencias >= 20 and winrate_padrao >= 50.0: score += 15
@@ -148,8 +155,9 @@ def calcular_score_adaptive(historico, taxa_roxa, tx_roxa_quente_ctx, ocorrencia
     if densidade_roxa >= 9: score += 25
     elif densidade_roxa <= 4: score -= 20
 
-    if densidade_roxa >= 8 and taxa_roxa >= 45.0 and pressao_radar >= 65:
-        score += 15
+    # ⚙️ AJUSTE 2: RECALIBRAGEM DA CONVERGÊNCIA (Taxa roxa global caiu de 45% para 35% para ativar o bônus)
+    if densidade_roxa >= 8 and taxa_roxa >= 35.0 and pressao_radar >= 50:
+        score += 20  # Aumentou impacto de +15 para +20
 
     score += pressao_radar * 0.35
     if fase == "DEFENSIVA": score -= 15
@@ -158,15 +166,18 @@ def calcular_score_adaptive(historico, taxa_roxa, tx_roxa_quente_ctx, ocorrencia
     elif eficiencia_recente <= 0.45: score -= 20
 
     if winrate_recente_padrao < 45.0 and ocorrencias >= 5: score -= 25
-    if detectar_exaustao(historico): score -= 20
+    if detectar_exaustao(historico): score -= 15  # Amortecido freio base de -20 para -15
 
     return min(max(int(score), 0), 100)
 
+# =========================================================
+# CONSENSO DINÂMICO DESTACADO v10.6
+# =========================================================
 def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente_ctx, mercado_instavel, historico, winrate_padrao, winrate_recente_padrao):
     if detectar_exaustao(historico): return "🛑 EXAUSTÃO DELTA", 0
     if mercado_instavel: return "⚠️ MERCADO INSTÁVEL", 0
 
-    if winrate_padrao >= 50.0 and winrate_recente_padrao <= 25.0:
+    if winrate_padrao >= 50.0 and winrate_recente_padrao <= 20.0: # Suavizado limite de 25% para 20%
         return "⚠️ DEGRADAÇÃO ACELERADA", 0
 
     peso_adaptive = 0.50
@@ -182,9 +193,11 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
 
     score_final = (adaptive_score * peso_adaptive) + (radar_score * peso_radar) + (expansion_score * peso_expansion)
 
-    if tx_roxa_quente_ctx < 38.0 and radar_score < 45: return "⚠️ PRESSÃO FRACA", int(score_final)
-    if expansion_score >= 88 and adaptive_score >= 78 and tx_roxa_quente_ctx >= 55: return "🌸 ROSA ELITE", int(score_final)
-    if adaptive_score >= 68 and radar_score >= 58 and tx_roxa_quente_ctx >= 48: return "🟢 CHANCE ELITE", int(score_final)
-    if adaptive_score >= 58: return "🟡 OBSERVANDO", int(score_final)
+    # ⚙️ AJUSTE 3: GATILHOS DE SINAL REDUZIDOS (Ajustados para a nova calibragem realista)
+    if tx_roxa_quente_ctx < 35.0 and radar_score < 35: return "⚠️ PRESSÃO FRACA", int(score_final)
+    
+    if expansion_score >= 80 and adaptive_score >= 72 and tx_roxa_quente_ctx >= 52: return "🌸 ROSA ELITE", int(score_final)
+    if adaptive_score >= 62 and radar_score >= 48 and tx_roxa_quente_ctx >= 44: return "🟢 CHANCE ELITE", int(score_final)
+    if adaptive_score >= 50: return "🟡 OBSERVANDO", int(score_final)
 
     return "🔴 AGUARDAR", int(score_final)
