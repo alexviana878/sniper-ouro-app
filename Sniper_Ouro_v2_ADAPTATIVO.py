@@ -103,7 +103,6 @@ if "dados_carregados" not in st.session_state:
 if st.session_state.quarentena:
     nova_quarentena = {}
     for ctx, rodadas in st.session_state.quarentena.items():
-        # Decaimento padrão linear para esvaziar a geladeira de forma controlada
         decaimento = 2
         nova = rodadas - decaimento
         if nova > 0: nova_quarentena[ctx] = nova
@@ -206,7 +205,8 @@ if len(st.session_state.historico) >= 30:
     ocorrencias, winrate_padrao, winrate_recente_padrao = analisar_banco_avancado(padrao_atual)
     banco_global = analisar_banco_global()
     
-    historico_quente = st.session_state.historico[-120:]
+    # ⚙️ PRIORIDADE 2: AMPLIAÇÃO DA JANELA QUENTE PARA 500 VELAS (Máxima estabilidade contra o "padrão cego")
+    historico_quente = st.session_state.historico[-500:]
     banco_quente = {}
     if len(historico_quente) >= 6:
         for i in range(5, len(historico_quente)):
@@ -217,25 +217,19 @@ if len(st.session_state.historico) >= 30:
                 if historico_quente[i] >= 2: banco_quente[pad]["roxa"] += 1
                 if historico_quente[i] >= 10: banco_quente[pad]["rosa"] += 1
 
-    tx_roxa = tx_rosa = tx_roxa_quente = tx_rosa_quente = 0
-    
+    tx_roxa = tx_rosa = 0
     if padrao_atual in banco_global:
         dados_p = banco_global[padrao_atual]
         tx_roxa = (dados_p["roxa"] / ocorrencias) * 100 if ocorrencias > 0 else 0
         tx_rosa = (dados_p["rosa"] / ocorrencias) * 100 if ocorrencias > 0 else 0
-        
-    if padrao_atual in banco_quente:
-        dados_q = banco_quente[padrao_atual]
-        ocorrencias_q = dados_q["total"]
-        tx_roxa_quente = (dados_q["roxa"] / ocorrencias_q) * 100
-        tx_rosa_quente = (dados_q["rosa"] / ocorrencias_q) * 100
-        
-    peso_historico, peso_quente = 0.55, 0.45
-    tx_roxa_final = (tx_roxa * peso_historico) + (tx_roxa_quente * peso_quente)
-    tx_rosa_final = (tx_rosa * peso_historico) + (tx_rosa_quente * peso_quente)
+
+    # ⚙️ PRIORIDADE 3: ENGENHARIA DA TAXA ROXA QUENTE CONTEXTUAL (Últimas 50 velas do mercado livre)
+    ultimas50 = st.session_state.historico[-50:]
+    roxas_curto = sum(1 for x in ultimas50 if x >= 2)
+    tx_roxa_quente_ctx = (roxas_curto / len(ultimas50)) * 100 if ultimas50 else 0.0
     
     adaptive_score = brain.calcular_score_adaptive(
-        st.session_state.historico, tx_roxa_final, tx_rosa_final, 
+        st.session_state.historico, tx_roxa, tx_roxa_quente_ctx, 
         ocorrencias, winrate_padrao, winrate_recente_padrao, 
         st.session_state.ultimos_resultados, janela_ativa
     )
@@ -255,13 +249,13 @@ if len(st.session_state.historico) >= 30:
         
     adaptive_score = max(adaptive_score - penalidade_quarentena, 0)
     
-    # ⚠️ PRIORIDADE Nº 3: CICATRIZ NEGATIVA MAIS PESADA (Aumentado multiplicador de 1.5 para 2.5)
+    # ⚙️ PRIORIDADE 3: ENDURECIMENTO CRÍTICO DA CICATRIZ (Multiplicador 2.5 | Cap de 25 pontos)
     peso_cicatriz = st.session_state.memoria_negativa.get(contexto_chave, 0)
     adaptive_score -= min(peso_cicatriz * 2.5, 25)
     adaptive_score = max(adaptive_score, 0)
     
-    mercado_instavel = tx_roxa_quente < 38 and radar_score < 50 and expansion_score < 48
-    mercado_favoravel = tx_roxa_quente >= 58 and radar_score >= 65
+    mercado_instavel = tx_roxa_quente_ctx < 38 and radar_score < 45 and expansion_score < 45
+    mercado_favoravel = tx_roxa_quente_ctx >= 58 and radar_score >= 65
     
     exaustao_detectada = brain.detectar_exaustao(st.session_state.historico)
     
@@ -289,8 +283,7 @@ if len(st.session_state.historico) >= 30:
     radar_score = max(min(radar_score, 100), 0)
     expansion_score = max(min(expansion_score, 100), 0)
     
-    # ⚠️ Chamada do consenso recebendo as taxas para o Detector de Regime
-    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente, mercado_instavel, st.session_state.historico, winrate_padrao, winrate_recente_padrao)
+    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente_ctx, mercado_instavel, st.session_state.historico, winrate_padrao, winrate_recente_padrao)
     
     if "ELITE" in sinal_final and score_final < 68:
         score_final = 68
@@ -303,14 +296,13 @@ if len(st.session_state.historico) >= 30:
     rm = brain.RiskManager()
     risco_ruina_status = rm.calcular_risco_ruina(st.session_state.acertos, st.session_state.erros, st.session_state.max_loss_streak)
     
-    # Cálculo local da Densidade Roxa das últimas 15 velas
     ultimas15 = st.session_state.historico[-15:] if len(st.session_state.historico) >= 15 else st.session_state.historico
     densidade_roxa_v = sum(1 for x in ultimas15 if x >= 2)
         
     st.session_state.ultima_entrada = sinal_final
     st.session_state.ultimo_contexto = contexto_chave
 else:
-    sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, tx_rosa, tx_roxa_quente, tx_rosa_quente, padrao_atual, adaptive_score = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, 0, 0, 0, "---", 0
+    sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, tx_rosa, tx_roxa_quente_ctx, padrao_atual, adaptive_score = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, 0, 0, "---", 0
     exaustao_detectada = False
     winrate_padrao = winrate_recente_padrao = 100.0
     eficiencia_recente = 1.0
@@ -342,7 +334,7 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
                 st.session_state.padroes_db[padrao_atual] = {"wins": 0, "loss": 0, "ultimo_winrate": 0.0}
                 
             if not deu_green:
-                # ⚠️ PRIORIDADE Nº 3: QUARENTENA REFORÇADA (De 25 para 45 rodadas de congelamento)
+                # ⚠️ PRIORIDADE 3: QUARENTENA REFORÇADA PARA 45 RODADAS DE TRAVAMENTO
                 tempo_quarentena = 15 if is_rosa_signal else 45
                 st.session_state.quarentena[st.session_state.ultimo_contexto] = tempo_quarentena
                 st.session_state.erros += 1
@@ -406,11 +398,11 @@ st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3><
 col1, col2 = st.columns(2)
 with col1:
     st.markdown(f"**🛡️ Cérebro Defensivo (Fase Macro):** {fase_macro}")
-    st.markdown(f"**⚡ Radar Rosa (Micro Pressão):** {radar_score}%")
+    st.markdown(f"**⚡ Radar Rosa (Micro Pressão Suavizada):** {radar_score}%")
     st.markdown(f"**📉 Winrate Histórico do Padrão:** {winrate_padrao:.1f}%")
     st.markdown(f"**📉 Taxa Roxa Global:** {tx_roxa:.1f}%")
-    st.markdown(f"**🔥 Taxa Roxa Quente:** {tx_roxa_quente:.1f}%")
-    # ⚠️ Exibição da métrica de Densidade Roxa das últimas 15 rodadas
+    # ⚠️ EXIBIÇÃO DA NOVA TAXA QUENTE CONTEXTUALIZADA DAS ÚLTIMAS 50 VELAS
+    st.markdown(f"**🔥 Taxa Roxa Quente (Contexto 50 Velas):** {tx_roxa_quente_ctx:.1f}%")
     st.markdown(f"**⚡ Densidade Roxa (Últimas 15 rds):** {densidade_roxa_v}/15")
 with col2:
     st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
