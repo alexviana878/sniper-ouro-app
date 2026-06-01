@@ -165,8 +165,6 @@ def processar_independente(historico):
 
 # --- BOTÃO PRINCIPAL DE CÁLCULO ---
 if st.button("CALCULAR PROBABILIDADE"):
-    # Salva a vela digitada ANTES de rodar o processador para verificar o acerto da rodada ANTERIOR
-    # Para saber se o sinal anterior deu WIN ou LOSS, precisamos da vela atual
     sinal_anterior = st.session_state.get("ultimo_sinal_gerado", "N/A")
 
     resultado_sinal = "N/A"
@@ -175,7 +173,6 @@ if st.button("CALCULAR PROBABILIDADE"):
     elif "ROSA" in sinal_anterior:
         resultado_sinal = "WIN" if vela >= 10.0 else "LOSS"
 
-    # Se já existia um sinal guardado em histórico, atualiza o resultado dele no CSV antes de registrar a nova
     if (
         sinal_anterior != "N/A"
         and os.path.exists("auditoria_log.csv")
@@ -186,15 +183,12 @@ if st.button("CALCULAR PROBABILIDADE"):
             leitor = csv.reader(f)
             linhas = list(leitor)
 
-        if len(linhas) > 1:  # Garante que tem dados além do cabeçalho
-            # Atualiza a coluna "Resultado" da última linha registrada com a resposta real da vela atual
+        if len(linhas) > 1:
             linhas[-1][-1] = resultado_sinal
-
             with open("auditoria_log.csv", mode="w", newline="", encoding="utf-8") as f:
                 escritor = csv.writer(f)
                 escritor.writerows(linhas)
 
-    # Executa a atualização normal das variáveis do jogo
     st.session_state.historico.append(vela)
     st.session_state.distancia_rosa = (
         0 if vela >= 10.0 else st.session_state.distancia_rosa + 1
@@ -210,15 +204,12 @@ if st.button("CALCULAR PROBABILIDADE"):
     elif st.session_state.contador_regra13 >= 0:
         st.session_state.contador_regra13 += 1
 
-    # Executa a motorização e pega as variáveis de freio
     sinal, cor, status, conf, f_recolhimento, f_falsa_rec = (
         processar_independente(st.session_state.historico)
     )
-
-    # Guarda o sinal atual para validar na próxima rodada
     st.session_state.ultimo_sinal_gerado = sinal
 
-    # --- INÍCIO DA GRAVAÇÃO AUTOMÁTICA DA AUDITORIA ---
+    # --- GRAVAÇÃO DA AUDITORIA ---
     if len(st.session_state.historico) >= 5:
         arquivo_existe = os.path.exists("auditoria_log.csv")
 
@@ -244,7 +235,6 @@ if st.button("CALCULAR PROBABILIDADE"):
                     ]
                 )
 
-            # O resultado do sinal começa como "AGUARDANDO VELA" e é atualizado na próxima rodada
             res_inicial = (
                 "AGUARDANDO VELA"
                 if ("ENTRAR" in sinal or "ROSA" in sinal)
@@ -260,9 +250,7 @@ if st.button("CALCULAR PROBABILIDADE"):
                     res_inicial,
                 ]
             )
-    # --- FIM DA GRAVAÇÃO AUTOMÁTICA ---
 
-# Força o reprocessamento visual correto no Streamlit para evitar delay de cliques
 sinal, cor, status, conf, f_recolhimento, f_falsa_rec = processar_independente(
     st.session_state.historico
 )
@@ -309,6 +297,23 @@ st.markdown(
     f'<div class="{cor}"><h1 style="color: {"#00ff00" if "ENTRAR" in sinal or "ROSA" in sinal else "#ef4444"};">{sinal}</h1><p>CONFIANÇA ADAPTATIVA: {conf}<br>DIRETRIZ: {status}</p></div>',
     unsafe_allow_html=True,
 )
+
+st.markdown("---")
+st.subheader("📊 Central de Auditoria")
+
+# BOTÃO DE DOWNLOAD EXCLUSIVO PARA SEGURANÇA NA NUVEM
+if os.path.exists("auditoria_log.csv"):
+    with open("auditoria_log.csv", "rb") as file:
+        st.download_button(
+            label="📥 BAIXAR RELATÓRIO DE AUDITORIA (.CSV)",
+            data=file,
+            file_name=f"auditoria_sniper_{datetime.now().strftime('%d_%m_%Y')}.csv",
+            mime="text/csv",
+        )
+else:
+    st.info(
+        "Alimente o sistema com mais de 5 velas para iniciar a gravação do relatório."
+    )
 
 if st.button("Limpar Histórico da Sessão"):
     st.session_state.historico = []
