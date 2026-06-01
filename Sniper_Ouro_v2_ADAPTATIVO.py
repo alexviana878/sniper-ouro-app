@@ -145,7 +145,6 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
     bloco_opcao = st.radio("Escolha a partição de dados para testar sobrevivência:", ["Carga Completa (Sem Divisão)", "Bloco 1 (Velas 1 a 10.000)", "Bloco 2 (Velas 10.001 a 15.000 - Fora da Amostra)", "Bloco 3 (Velas 15.001 a 20.000 - Fora da Amostra)"])
     arquivo = st.file_uploader("Suba o arquivo master de dados", type=["csv","txt"])
     
-    # Trava de Segurança Antiduplicação Injetada no Botão de Upload
     if arquivo is not None:
         conteudo = arquivo.read().decode("utf-8")
         linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n")]
@@ -173,8 +172,8 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
             novo_historico = dados_brutos
             st.session_state.bloco_validacao = "COMPLETO"
 
-        # 🔥 A MUDANÇA ESSENCIAL: Se um novo arquivo for carregado, limpa-se as duplicatas da RAM imediatamente
-        if "arquivo_processado" not in st.session_state or st.session_state.arquivo_processado != arquivo.name:
+        # 🔥 MARCAÇÃO MASTER DEFINITIVA: Força a redefinição estrita do tamanho para matar a duplicação
+        if "chave_validacao_unica" not in st.session_state or len(st.session_state.historico) != len(novo_historico):
             novos_padroes, dist_rosa = [], 0
             for i, valor in enumerate(novo_historico):
                 dist_rosa = 0 if valor >= 10 else dist_rosa + 1
@@ -184,7 +183,7 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
             st.session_state.historico = novo_historico
             st.session_state.banco_padroes = novos_padroes
             st.session_state.distancia_rosa = dist_rosa
-            st.session_state.arquivo_processado = arquivo.name
+            st.session_state.chave_validacao_unica = len(novo_historico)
             salvar_memoria()
             st.success(f"🔥 Laboratório Sincronizado com Sucesso: {len(novo_historico)} rodadas ativadas!")
             st.rerun()
@@ -432,6 +431,7 @@ if total_rodadas_auditadas > 0:
             st.session_state.auditoria_sinais = {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0}
             st.session_state.auditoria_assertividade = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
             st.session_state.log_auditoria_completo = []
+            if "chave_validacao_unica" in st.session_state: del st.session_state.chave_validacao_unica
             salvar_memoria()
             st.rerun()
 
@@ -483,6 +483,6 @@ if st.button("RESETAR ECOSSISTEMA TOTAL"):
     st.session_state.auditoria_sinais = {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0}
     st.session_state.auditoria_assertividade = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
     st.session_state.log_auditoria_completo = []
-    if "arquivo_processado" in st.session_state: del st.session_state.arquivo_processado
+    if "chave_validacao_unica" in st.session_state: del st.session_state.chave_validacao_unica
     salvar_memoria()
     st.rerun()
