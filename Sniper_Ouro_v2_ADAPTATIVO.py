@@ -229,7 +229,6 @@ if len(st.session_state.historico) >= 30:
     roxas_curto = sum(1 for x in ultimas50 if x >= 2)
     tx_roxa_quente_ctx = (roxas_curto / len(ultimas50)) * 100 if ultimas50 else 0.0
     
-    # Chamada alinhada e revisada com tratamento de tupla
     retorno_adaptive = brain.calcular_score_adaptive(
         st.session_state.historico, tx_roxa, tx_roxa_quente_ctx, 
         ocorrencias, winrate_padrao, winrate_recente_padrao, 
@@ -360,7 +359,6 @@ elif "OBSERVANDO" in sinal_final: cor_card = "gold-card"
 
 st.markdown(f'<div class="{cor_card}"><h1 style="text-align:center;font-size:38px;margin:0;">{sinal_final}</h1><p style="text-align:center;margin:5px 0 0 0;font-size:18px;"><b>CONSENSO:</b> {score_final}% | <b>PADRÃO:</b> {padrao_atual}</p></div>', unsafe_allow_html=True)
 
-# TELEMETRIA INSTRUMENTADA DO ADAPTIVE (Com prevenção estrita de erro .get)
 st.markdown("""
 <div class="debug-card">
     • 🧱 BASE STRUCTURAL SCORE : <b>{} pts</b><br>
@@ -380,7 +378,11 @@ st.markdown("""
 
 st.markdown('<div class="audit-card"><h3>📊 RELATÓRIO DE AUDITORIA QUANTITATIVA AUTOMÁTICA</h3></div>', unsafe_allow_html=True)
 total_rodadas_auditadas = len(st.session_state.log_auditoria_completo)
-st.write(f"🧬 *Volume de Amostragem Acumulado:* **{total_rodadas_auditadas}** rodadas gravadas automaticamente.")
+total_rodadas_historico = len(st.session_state.historico)
+
+# LINHA ADICIONADA: Exibe o somatório acumulado do histórico (Carga + Digitadas)
+st.markdown(f"📊 **Volume Total do Histórico Ativo:** `{total_rodadas_historico}` rodadas carregadas no ecossistema.")
+st.write(f"🧬 *Volume de Amostragem Auditada nesta Sessão:* **{total_rodadas_auditadas}** rodadas gravadas automaticamente.")
 
 col_f1, col_f2 = st.columns(2)
 with col_f1:
