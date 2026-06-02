@@ -48,6 +48,8 @@ def carregar_memoria():
                 if "auditoria_sinais" not in dados: dados["auditoria_sinais"] = {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0}
                 if "auditoria_assertividade" not in dados: dados["auditoria_assertividade"] = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
                 if "log_auditoria_completo" not in dados: dados["log_auditoria_completo"] = []
+                # Inicialização do novo contador de freio dominante
+                if "freio_dominante" not in dados: dados["freio_dominante"] = {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0}
                 return dados
         except: pass
     return {
@@ -60,7 +62,8 @@ def carregar_memoria():
         "auditoria_freios": {"exaustao": 0, "degradacao": 0, "eficiencia": 0, "fase_macro": 0},
         "auditoria_sinais": {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0},
         "auditoria_assertividade": {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}},
-        "log_auditoria_completo": []
+        "log_auditoria_completo": [],
+        "freio_dominante": {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0}
     }
 
 def salvar_memoria():
@@ -87,7 +90,8 @@ def salvar_memoria():
         "auditoria_freios": st.session_state.auditoria_freios,
         "auditoria_sinais": st.session_state.auditoria_sinais,
         "auditoria_assertividade": st.session_state.auditoria_assertividade,
-        "log_auditoria_completo": st.session_state.log_auditoria_completo
+        "log_auditoria_completo": st.session_state.log_auditoria_completo,
+        "freio_dominante": st.session_state.freio_dominante
     }
     with open(ARQUIVO_MEMORIA, "w") as f: json.dump(dados, f)
 
@@ -116,6 +120,7 @@ if "dados_carregados" not in st.session_state:
     st.session_state.auditoria_sinais = dados.get("auditoria_sinais", {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0})
     st.session_state.auditoria_assertividade = dados.get("auditoria_assertividade", {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}})
     st.session_state.log_auditoria_completo = dados.get("log_auditoria_completo", [])
+    st.session_state.freio_dominante = dados.get("freio_dominante", {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0})
     st.session_state.ultima_entrada = None
     st.session_state.ultimo_contexto = None
     st.session_state.dados_carregados = True
@@ -145,7 +150,6 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
     bloco_opcao = st.radio("Escolha a partição de dados para testar sobrevivência:", ["Carga Completa (Sem Divisão)", "Bloco 1 (Velas 1 a 10.000)", "Bloco 2 (Velas 10.001 a 15.000 - Fora da Amostra)", "Bloco 3 (Velas 15.001 a 20.000 - Fora da Amostra)"])
     arquivo = st.file_uploader("Suba o arquivo master de dados", type=["csv","txt"])
     
-    # Sincronização estrita de linhas sem duplicar e corrigida de NameError
     if arquivo is not None and len(st.session_state.historico) == 0:
         conteudo = arquivo.read().decode("utf-8")
         linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n")]
@@ -295,11 +299,32 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         nome_sinal_limpo = "CHANCE ELITE" if "CHANCE ELITE" in sinal_ativo else ("ROSA ELITE" if "ROSA ELITE" in sinal_ativo else ("OBSERVANDO" if "OBSERVANDO" in sinal_ativo else "AGUARDAR"))
         st.session_state.auditoria_sinais[nome_sinal_limpo] += 1
         
-        if auditoria_dict.get("penalidade_exaustao", 0) > 0: st.session_state.auditoria_freios["exaustao"] += 1
-        if auditoria_dict.get("penalidade_degradacao", 0) > 0: st.session_state.auditoria_freios["degradacao"] += 1
-        if auditoria_dict.get("penalidade_eficiencia", 0) > 0: st.session_state.auditoria_freios["eficiencia"] += 1
-        if auditoria_dict.get("penalidade_fase", 0) > 0: st.session_state.auditoria_freios["fase_macro"] += 1
+        # Leitura e acumulação dos freios ativos na rodada
+        p_ex = auditoria_dict.get("penalidade_exaustao", 0)
+        p_de = auditoria_dict.get("penalidade_degradacao", 0)
+        p_ef = auditoria_dict.get("penalidade_eficiencia", 0)
+        p_fa = auditoria_dict.get("penalidade_fase", 0)
+
+        if p_ex > 0: st.session_state.auditoria_freios["exaustao"] += 1
+        if p_de > 0: st.session_state.auditoria_freios["degradacao"] += 1
+        if p_ef > 0: st.session_state.auditoria_freios["eficiencia"] += 1
+        if p_fa > 0: st.session_state.auditoria_freios["fase_macro"] += 1
         
+        # 📊 CÁLCULO LOGÍSTICO DO FREIO DOMINANTE (Quem tirou mais pontos nesta rodada?)
+        valores_freios = {
+            "EXAUSTÃO": p_ex,
+            "DEGRADAÇÃO": p_de,
+            "EFICIÊNCIA": p_ef,
+            "FASE MACRO": p_fa
+        }
+        
+        # Se houve alguma penalidade aplicada, encontra a maior e incrementa o freio dominante
+        if max(valores_freios.values()) > 0:
+            freio_vencedor = max(valores_freios, key=valores_freios.get)
+            st.session_state.freio_dominante[freio_vencedor] += 1
+        else:
+            st.session_state.freio_dominante["NENHUM"] += 1
+
         if nome_sinal_limpo in st.session_state.auditoria_assertividade:
             if deu_green: st.session_state.auditoria_assertividade[nome_sinal_limpo]["wins"] += 1
             else: st.session_state.auditoria_assertividade[nome_sinal_limpo]["loss"] += 1
@@ -309,10 +334,10 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             "padrao": padrao_atual,
             "sinal": nome_sinal_limpo,
             "score_adaptive": adaptive_score,
-            "exaustao": auditoria_dict.get("penalidade_exaustao", 0) > 0,
-            "degradacao": auditoria_dict.get("penalidade_degradacao", 0) > 0,
-            "eficiencia": auditoria_dict.get("penalidade_eficiencia", 0) > 0,
-            "fase_macro": auditoria_dict.get("penalidade_fase", 0) > 0,
+            "exaustao": p_ex > 0,
+            "degradacao": p_de > 0,
+            "eficiencia": p_ef > 0,
+            "fase_macro": p_fa > 0,
             "resultado_vela": vela,
             "resultado_status": "WIN" if deu_green else "LOSS"
         })
@@ -391,13 +416,23 @@ st.write(f"🧬 *Volume de Amostragem Auditada nesta Sessão:* **{total_rodadas_
 
 col_f1, col_f2 = st.columns(2)
 with col_f1:
-    st.markdown("##### 🛑 Atuações de Freios Internos")
+    st.markdown("##### 🛑 Atuações de Freios Internos (Acumulado)")
     st.markdown(f"• **Exaustão:** `{st.session_state.auditoria_freios['exaustao']}` acionamentos")
     st.markdown(f"• **Degradação Recente:** `{st.session_state.auditoria_freios['degradacao']}` acionamentos")
     st.markdown(f"• **Eficiência:** `{st.session_state.auditoria_freios['eficiencia']}` acionamentos")
     st.markdown(f"• **Fase Macro:** `{st.session_state.auditoria_freios['fase_macro']}` acionamentos")
 
 with col_f2:
+    st.markdown("##### 👑 IMPACTO CRÍTICO: FREIO DOMINANTE")
+    st.markdown(f"🥇 **EXAUSTÃO DOMINOU:** `{st.session_state.freio_dominante['EXAUSTÃO']}` rodadas")
+    st.markdown(f"🥈 **DEGRADAÇÃO DOMINOU:** `{st.session_state.freio_dominante['DEGRADAÇÃO']}` rodadas")
+    st.markdown(f"🥉 **EFICIÊNCIA DOMINOU:** `{st.session_state.freio_dominante['EFICIÊNCIA']}` rodadas")
+    st.markdown(f"🏅 **FASE MACRO DOMINOU:** `{st.session_state.freio_dominante['FASE MACRO']}` rodadas")
+    st.markdown(f"🟢 **SEM FREIOS ATIVOS:** `{st.session_state.freio_dominante['NENHUM']}` rodadas")
+
+st.markdown("---")
+col_s1, col_s2 = st.columns(2)
+with col_s1:
     st.markdown("##### 📢 Distribuição de Volumetria de Sinais")
     st.markdown(f"• **CHANCE ELITE:** `{st.session_state.auditoria_sinais['CHANCE ELITE']}` vezes")
     st.markdown(f"• **ROSA ELITE:** `{st.session_state.auditoria_sinais['ROSA ELITE']}` vezes")
@@ -475,5 +510,6 @@ if st.button("RESETAR ECOSSISTEMA TOTAL"):
     st.session_state.auditoria_sinais = {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0}
     st.session_state.auditoria_assertividade = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
     st.session_state.log_auditoria_completo = []
+    st.session_state.freio_dominante = {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0}
     salvar_memoria()
     st.rerun()
