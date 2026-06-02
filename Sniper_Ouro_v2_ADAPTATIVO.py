@@ -145,12 +145,12 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
     bloco_opcao = st.radio("Escolha a partição de dados para testar sobrevivência:", ["Carga Completa (Sem Divisão)", "Bloco 1 (Velas 1 a 10.000)", "Bloco 2 (Velas 10.001 a 15.000 - Fora da Amostra)", "Bloco 3 (Velas 15.001 a 20.000 - Fora da Amostra)"])
     arquivo = st.file_uploader("Suba o arquivo master de dados", type=["csv","txt"])
     
-    # ⚙️ ENGENHARIA ANTI-LINHAS INVISÍVEIS DO EXCEL ATIVADA
-    if arquivo is not None:
+    # TRAVA INTELIGENTE: Só injeta o arquivo se o histórico estiver zerado (Evita sobrescrever entradas manuais)
+    if arquivo is not None and len(st.session_state.historico) == 0:
         conteudo = arquivo.read().decode("utf-8")
         linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n")]
         dados_brutos = []
-        for file_line in linhas:
+        for file_line in lines:
             if not file_line: 
                 continue
             try:
@@ -174,20 +174,18 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
             novo_historico = dados_brutos
             st.session_state.bloco_validacao = "COMPLETO"
 
-        # Trava de sincronização estrita na RAM profunda
-        if len(st.session_state.historico) != len(novo_historico):
-            novos_padroes, dist_rosa = [], 0
-            for i, valor in enumerate(novo_historico):
-                dist_rosa = 0 if valor >= 10 else dist_rosa + 1
-                if i >= 5:
-                    novos_padroes.append({"padrao": brain.gerar_padrao(novo_historico[i-5:i]), "resultado": valor})
-                    
-            st.session_state.historico = novo_historico
-            st.session_state.banco_padroes = novos_padroes
-            st.session_state.distancia_rosa = dist_rosa
-            salvar_memoria()
-            st.success(f"🔥 Sincronização Estrita Efetuada: {len(novo_historico)} rodadas limpas!")
-            st.rerun()
+        novos_padroes, dist_rosa = [], 0
+        for i, valor in enumerate(novo_historico):
+            dist_rosa = 0 if valor >= 10 else dist_rosa + 1
+            if i >= 5:
+                novos_padroes.append({"padrao": brain.gerar_padrao(novo_historico[i-5:i]), "resultado": valor})
+                
+        st.session_state.historico = novo_historico
+        st.session_state.banco_padroes = novos_padroes
+        st.session_state.distancia_rosa = dist_rosa
+        salvar_memoria()
+        st.success(f"🔥 Sincronização Estrita Efetuada: {len(novo_historico)} rodadas limpas!")
+        st.rerun()
 
 def analisar_banco_avancado(padrao_alvo):
     total_p = wins_p = loss_p = 0
