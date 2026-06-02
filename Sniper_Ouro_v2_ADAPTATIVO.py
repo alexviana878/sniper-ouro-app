@@ -145,6 +145,7 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
     bloco_opcao = st.radio("Escolha a partição de dados para testar sobrevivência:", ["Carga Completa (Sem Divisão)", "Bloco 1 (Velas 1 a 10.000)", "Bloco 2 (Velas 10.001 a 15.000 - Fora da Amostra)", "Bloco 3 (Velas 15.001 a 20.000 - Fora da Amostra)"])
     arquivo = st.file_uploader("Suba o arquivo master de dados", type=["csv","txt"])
     
+    # 🔥 TRAVA DE SOBREGRAVAÇÃO ABSOLUTA E DIRETA
     if arquivo is not None:
         conteudo = arquivo.read().decode("utf-8")
         linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n")]
@@ -172,8 +173,8 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
             novo_historico = dados_brutos
             st.session_state.bloco_validacao = "COMPLETO"
 
-        # 🔥 MARCAÇÃO MASTER DEFINITIVA: Força a redefinição estrita do tamanho para matar a duplicação
-        if "chave_validacao_unica" not in st.session_state or len(st.session_state.historico) != len(novo_historico):
+        # Mudança Estrutural: Se o tamanho na memória RAM for diferente da partição calculada, limpa tudo e iguala na hora!
+        if len(st.session_state.historico) != len(novo_historico):
             novos_padroes, dist_rosa = [], 0
             for i, valor in enumerate(novo_historico):
                 dist_rosa = 0 if valor >= 10 else dist_rosa + 1
@@ -183,9 +184,8 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
             st.session_state.historico = novo_historico
             st.session_state.banco_padroes = novos_padroes
             st.session_state.distancia_rosa = dist_rosa
-            st.session_state.chave_validacao_unica = len(novo_historico)
             salvar_memoria()
-            st.success(f"🔥 Laboratório Sincronizado com Sucesso: {len(novo_historico)} rodadas ativadas!")
+            st.success(f"🔥 Sincronização Estrita Efetuada: {len(novo_historico)} rodadas limpas!")
             st.rerun()
 
 def analisar_banco_avancado(padrao_alvo):
@@ -426,54 +426,6 @@ with c_as4:
 if total_rodadas_auditadas > 0:
     with st.expander("📥 VER BANCO DATA LOG COMPLETO", expanded=False):
         st.json(st.session_state.log_auditoria_completo[-20:])
-        if st.button("LIMPAR APENAS DADOS DE AUDITORIA"):
-            st.session_state.auditoria_freios = {"exaustao": 0, "degradacao": 0, "eficiencia": 0, "fase_macro": 0}
-            st.session_state.auditoria_sinais = {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0}
-            st.session_state.auditoria_assertividade = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
-            st.session_state.log_auditoria_completo = []
-            if "chave_validacao_unica" in st.session_state: del st.session_state.chave_validacao_unica
-            salvar_memoria()
-            st.rerun()
-
-st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
-col1, col2 = st.columns(2)
-with col1:
-    st.markdown(f"**🛡️ Cérebro Defensivo (Fase Macro):** {fase_macro}")
-    st.markdown(f"**⚡ Radar Rosa (Micro Pressão Suavizada):** {radar_score}%")
-    st.markdown(f"**📉 Winrate Histórico do Padrão:** {winrate_padrao:.1f}%")
-    st.markdown(f"**📉 Taxa Roxa Global:** {tx_roxa:.1f}%")
-    st.markdown(f"**🔥 Taxa Roxa Quente (Contexto 50 Velas):** {tx_roxa_quente_ctx:.1f}%")
-    st.markdown(f"**⚡ Densidade Roxa (Últimas 15 rds):** {densidade_roxa_v}/15")
-with col2:
-    st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
-    st.markdown(f"**🧬 Força Base (Core Adaptive):** {adaptive_score}%")
-    st.markdown(f"**🥀 Winrate Recent do Padrão (Degradação):** {winrate_recente_padrao:.1f}%")
-    st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rds")
-
-if len(st.session_state.historico) > 0:
-    st.markdown('<div class="main-card"><h3>📊 MONITOR DE FLUXO EM TEMPO REAL</h3></div>', unsafe_allow_html=True)
-    st.markdown(f"<p style='font-size:18px;color:#00ff66;line-height:1.6;'>{' → '.join([f'**[{v}]**' for v in st.session_state.historico[-16:]])}</p>", unsafe_allow_html=True)
-
-total = st.session_state.acertos + st.session_state.erros
-assertividade = (st.session_state.acertos / total) * 100 if total > 0 else 0
-st.markdown('<div class="gold-card"><h3 style="text-align:center;">📊 ENGINE DE VALIDAÇÃO QUANTITATIVA AVANÇADA</h3></div>', unsafe_allow_html=True)
-c1, c2, c3 = st.columns(3)
-with c1: 
-    st.metric("✅ ACERTOS MASTER", st.session_state.acertos)
-    st.metric("📈 DRAWDOWN HISTÓRICO", f"{st.session_state.max_drawdown_calc*100:.2f}%")
-    st.metric("📊 SCORE MÉDIO SINAIS", f"{st.session_state.score_medio}%")
-with c2: 
-    st.metric("❌ ERROS MASTER", st.session_state.erros)
-    st.metric("💀 MÁXIMA SEQUÊNCIA LOSS", st.session_state.max_loss_streak)
-    st.metric("🎯 TOTAL OPERAÇÕES EMITIDAS", st.session_state.total_operacoes)
-with c3: 
-    st.metric("📊 TAXA ACERTO GLOBAL", f"{assertividade:.1f}%")
-    st.metric("🛡️ RISCO DE RUÍNA", risco_ruina_status)
-
-if st.session_state.padroes_db:
-    with st.expander("📚 FILTRAGEM INTELIGENTE - BANCO DE PADRÕES ATIVOS (PERSISTENTE)", expanded=False):
-        for pad, stats in st.session_state.padroes_db.items():
-            st.markdown(f"🔹 **Padrão:** `{pad}` | 🟢 Wins: **{stats['wins']}** | 🔴 Loss: **{stats['loss']}** | 📊 Winrate: **{stats['ultimo_winrate']}%**")
 
 if st.button("RESETAR ECOSSISTEMA TOTAL"):
     if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
