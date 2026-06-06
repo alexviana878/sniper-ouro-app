@@ -40,7 +40,6 @@ h1,h2,h3,p,label { color: white !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- CONFIGURAÇÃO DE DIRETÓRIOS E COMPLIANCE DA FASE 1 ---
 PASTA_DADOS = "dados"
 if not os.path.exists(PASTA_DADOS):
     os.makedirs(PASTA_DADOS)
@@ -105,7 +104,6 @@ def salvar_memoria():
     }
     with open(ARQUIVO_MEMORIA, "w") as f: json.dump(dados, f)
 
-# Inicializa cabeçalho estável do CSV caso ele não exista
 if not os.path.exists(ARQUIVO_AUDITORIA_CSV):
     with open(ARQUIVO_AUDITORIA_CSV, "w") as csv_f:
         csv_f.write(CABECALHO_CSV)
@@ -136,8 +134,11 @@ if "dados_carregados" not in st.session_state:
     st.session_state.auditoria_assertividade = dados.get("auditoria_assertividade", {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}})
     st.session_state.log_auditoria_completo = dados.get("log_auditoria_completo", [])
     st.session_state.freio_dominante = dados.get("freio_dominante", {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0})
-    st.session_state.ultima_entrada = None
-    st.session_state.ultimo_contexto = None
+    
+    # CONSERVAÇÃO ESTÁVEL DO ESTADO ANTERIOR DA RODADA (Mapeamento limpo de strings para evitar Hipótese 3)
+    st.session_state.sinal_pendente_julgamento = "AGUARDAR"
+    st.session_state.contexto_pendente_julgamento = None
+    st.session_state.snapshot_metricas_rodada = {}
     st.session_state.dados_carregados = True
 
 if st.session_state.quarentena:
@@ -250,20 +251,16 @@ if len(st.session_state.historico) >= 30:
     if padrao_atual in banco_global:
         tx_roxa = (banco_global[padrao_atual]["roxa"] / ocorrencias) * 100 if ocorrencias > 0 else 0
 
-    ultimas50 = st.session_state.historico[-50:]
-    roxas_curto = sum(1 for x in ultimas50 if x >= 2)
-    tx_roxa_quente_ctx = (roxas_curto / len(ultimas50)) * 100 if ultimas50 else 0.0
-    
-    retorno_adaptive = brain.calcular_score_adaptive(
-        st.session_state.historico, tx_roxa, tx_roxa_quente_ctx, 
+    return_adaptive = brain.calcular_score_adaptive(
+        st.session_state.historico, tx_roxa, 0, 
         ocorrencias, winrate_padrao, winrate_recente_padrao, 
         st.session_state.ultimos_resultados, janela_ativa
     )
     
-    if isinstance(retorno_adaptive, tuple):
-        adaptive_score, auditoria_dict = retorno_adaptive
+    if isinstance(return_adaptive, tuple):
+        adaptive_score, auditoria_dict = return_adaptive
     else:
-        adaptive_score = retorno_adaptive
+        adaptive_score = return_adaptive
         auditoria_dict = {"score_base": adaptive_score, "penalidade_fase": 0, "penalidade_eficiencia": 0, "penalidade_degradacao": 0, "penalidade_exaustao": 0}
     
     if st.session_state.distancia_rosa <= 5: faixa_rosa = "CURTA"
@@ -271,53 +268,45 @@ if len(st.session_state.historico) >= 30:
     else: faixa_rosa = "LONGA"
     
     contexto_chave = f"{padrao_atual}_{fase_macro}_{faixa_rosa}"
-    if contexto_chave in st.session_state.memoria_positiva: adaptive_score = min(adaptive_score + 8, 100)
-    if contexto_chave in st.session_state.quarentena: adaptive_score = max(adaptive_score - min(st.session_state.quarentena[contexto_chave] * 2, 30), 0)
+    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 0, False, st.session_state.historico, winrate_padrao, winrate_recente_padrao)
     
-    adaptive_score -= min(st.session_state.memoria_negativa.get(contexto_chave, 0) * 2.5, 25)
-    mercado_instavel = tx_roxa_quente_ctx < 38 and radar_score < 45 and expansion_score < 45
-    
-    if aceleracoes["roxa"]: radar_score = min(radar_score + 4, 100)
-    if aceleracoes["rosa"]: expansion_score = min(expansion_score + 6, 100)
-    
-    adaptive_score = max(min(adaptive_score, 100), 0)
-    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente_ctx, mercado_instavel, st.session_state.historico, winrate_padrao, winrate_recente_padrao)
-    
-    if "ELITE" in sinal_final and score_final < 68: score_final = 68
-    if st.session_state.modo_defensivo and st.session_state.cooldown_rodadas > 0:
-        sinal_final = "🚫 COOLDOWN SHIELD"
-        score_final = 0
-        
     rm = brain.RiskManager()
     risco_ruina_status = rm.calcular_risco_ruina(st.session_state.acertos, st.session_state.erros, st.session_state.max_loss_streak)
     densidade_roxa_v = sum(1 for x in st.session_state.historico[-15:] if x >= 2) if len(st.session_state.historico) >= 15 else 0
-        
-    st.session_state.ultima_entrada = sinal_final
-    st.session_state.ultimo_contexto = contexto_chave
 else:
-    sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, tx_roxa_quente_ctx, padrao_atual, adaptive_score = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, 0, "---", 0
+    sinal_final, score_final, expansion_score, radar_score, fase_macro, ocorrencias, tx_roxa, padrao_atual, adaptive_score = "COLETANDO DADOS", 0, 0, 0, "NEUTRA", 0, 0, "---", 0
     winrate_padrao = winrate_recente_padrao = 100.0
     risco_ruina_status = "COLETANDO"
     densidade_roxa_v = 0
+    contexto_chave = "---"
 
 st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:#7c3aed;font-size:14px;"><b>PARTIÇÃO ATIVA:</b> {st.session_state.bloco_validacao} | 🧠 <b>CÉREBRO V:</b> {VERSAO_CEREBRO}</p></div>', unsafe_allow_html=True)
 
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
+# --- 🔥 BLINDAGEM DA PRIORIDADE 1: ORDEM CRÍTICA DE EXECUÇÃO DE CALLBACK ---
 if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
-    if st.session_state.ultimo_contexto:
-        sinal_ativo = st.session_state.ultima_entrada
-        if "ROSA" in sinal_ativo: deu_green = vela >= 10
-        else: deu_green = vela >= 2
+    # 1. PEGA O SINAL QUE FICOU AGUARDANDO A VELA NA RODADA PASSADA
+    sinal_emitido_anterior = st.session_state.sinal_pendente_julgamento
+    contexto_anterior = st.session_state.contexto_pendente_julgamento
+    snapshot = st.session_state.snapshot_metricas_rodada
+    
+    if contexto_anterior is not None:
+        # JULGAMENTO JUSTO DO ALVO
+        if "ROSA" in sinal_emitido_anterior: deu_green = vela >= 10.0
+        else: deu_green = vela >= 2.0
             
-        nome_sinal_limpo = "CHANCE ELITE" if "CHANCE ELITE" in sinal_ativo else ("ROSA ELITE" if "ROSA ELITE" in sinal_ativo else ("OBSERVANDO" if "OBSERVANDO" in sinal_ativo else "AGUARDAR"))
+        # Sincroniza nomenclatura estrita para evitar erros de String (Hipótese 3)
+        nome_sinal_limpo = "CHANCE ELITE" if "CHANCE" in sinal_emitido_anterior else ("ROSA ELITE" if "ROSA" in sinal_emitido_anterior else ("OBSERVANDO" if "OBSERVANDO" in sinal_emitido_anterior else "AGUARDAR"))
+        
         st.session_state.auditoria_sinais[nome_sinal_limpo] += 1
         
-        p_ex = auditoria_dict.get("penalidade_exaustao", 0)
-        p_de = auditoria_dict.get("penalidade_degradacao", 0)
-        p_ef = auditoria_dict.get("penalidade_eficiencia", 0)
-        p_fa = auditoria_dict.get("penalidade_fase", 0)
+        # Puxa penalidades que geraram o sinal passado
+        p_ex = snapshot.get("p_ex", 0)
+        p_de = snapshot.get("p_de", 0)
+        p_ef = snapshot.get("p_ef", 0)
+        p_fa = snapshot.get("p_fa", 0)
 
         if p_ex > 0: st.session_state.auditoria_freios["exaustao"] += 1
         if p_de > 0: st.session_state.auditoria_freios["degradacao"] += 1
@@ -325,7 +314,6 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         if p_fa > 0: st.session_state.auditoria_freios["fase_macro"] += 1
         
         valores_freios = {"EXAUSTÃO": p_ex, "DEGRADAÇÃO": p_de, "EFICIÊNCIA": p_ef, "FASE MACRO": p_fa}
-        
         if max(valores_freios.values()) > 0:
             freio_escolhido = max(valores_freios, key=valores_freios.get)
             st.session_state.freio_dominante[freio_escolhido] += 1
@@ -333,84 +321,103 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             freio_escolhido = "NENHUM"
             st.session_state.freio_dominante["NENHUM"] += 1
 
+        if nome_sinal_limpo in st.session_state.auditoria_assertividade:
+            if deu_green: st.session_state.auditoria_assertividade[nome_sinal_limpo]["wins"] += 1
+            else: st.session_state.auditoria_assertividade[nome_sinal_limpo]["loss"] += 1
+
+        status_final_operacao = "WIN" if deu_green else "LOSS"
+
         st.session_state.log_auditoria_completo.append({
             "rodada": len(st.session_state.historico) + 1,
-            "padrao": padrao_atual,
+            "padrao": snapshot.get("padrao", "---"),
             "sinal": nome_sinal_limpo,
-            "score_adaptive": adaptive_score,
-            "exaustao": p_ex > 0,
-            "degradacao": p_de > 0,
-            "eficiencia": p_ef > 0,
-            "fase_macro": p_fa > 0,
+            "score_adaptive": snapshot.get("adaptive", 0),
             "resultado_vela": vela,
-            "resultado_status": "WIN" if deu_green else "LOSS"
+            "resultado_status": status_final_operacao
         })
 
-        # --- 💥 MELHORIA RECOMENDADA: ID DE SEGURANÇA MÁXIMA COM SEGUNDOS ---
+        # SÓ SOMA NA BANCA MASTER SE FOR OPERAÇÃO REAL EMITIDA (ELITE OU CHANCE)
+        if "ELITE" in nome_sinal_limpo or "CHANCE" in nome_sinal_limpo:
+            st.session_state.total_operacoes += 1
+            st.session_state.score_medio = int(((st.session_state.score_medio * (st.session_state.total_operacoes - 1)) + snapshot.get("score_final", 0)) / st.session_state.total_operacoes)
+            
+            p_atual_snap = snapshot.get("padrao", "---")
+            if p_atual_snap not in st.session_state.padroes_db: st.session_state.padroes_db[p_atual_snap] = {"wins": 0, "loss": 0, "ultimo_winrate": 0.0}
+            
+            if not deu_green:
+                st.session_state.erros += 1
+                st.session_state.ultimos_resultados.append("LOSS")
+                st.session_state.perdas_consecutivas += 1
+                st.session_state.padroes_db[p_atual_snap]["loss"] += 1
+            else:
+                st.session_state.acertos += 1
+                st.session_state.ultimos_resultados.append("WIN")
+                st.session_state.perdas_consecutivas = 0
+                st.session_state.padroes_db[p_atual_snap]["wins"] += 1
+                
+            total_p_db = st.session_state.padroes_db[p_atual_snap]["wins"] + st.session_state.padroes_db[p_atual_snap]["loss"]
+            st.session_state.padroes_db[p_atual_snap]["ultimo_winrate"] = round((st.session_state.padroes_db[p_atual_snap]["wins"] / total_p_db) * 100, 1)
+
+        # GRAVAÇÃO PERSISTENTE NO DATALOG CSV DA FASE A
         time_stamp = datetime.now().strftime("%Y%m%d%H%M%S")
         id_rodada = f"{time_stamp}{len(st.session_state.historico) + 1:03d}"
         cor_vela = "ROSA" if vela >= 10.0 else ("ROXA" if vela >= 2.0 else "AZUL")
-        status_final_operacao = "WIN" if deu_green else "LOSS"
 
         with open(ARQUIVO_AUDITORIA_CSV, "a") as csv_f:
             csv_f.write(
                 f"{id_rodada},"
                 f"{VERSAO_CEREBRO},"
                 f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')},"
-                f"{padrao_atual},"
-                f"{fase_macro},"
+                f"{snapshot.get('padrao','---')},"
+                f"{snapshot.get('fase','---')},"
                 f"{vela},"
                 f"{cor_vela},"
-                f"{radar_score},"
-                f"{expansion_score},"
-                f"{winrate_padrao:.2f},"
-                f"{winrate_recente_padrao:.2f},"
-                f"{adaptive_score},"
-                f"{st.session_state.distancia_rosa},"
-                f"{densidade_roxa_v},"
+                f"{snapshot.get('radar',0)},"
+                f"{snapshot.get('expansao',0)},"
+                f"{snapshot.get('win_p',0):.2f},"
+                f"{snapshot.get('win_r',0):.2f},"
+                f"{snapshot.get('adaptive',0)},"
+                f"{snapshot.get('dist_rosa',0)},"
+                f"{snapshot.get('densidade',0)},"
                 f"{freio_escolhido},"
                 f"{nome_sinal_limpo},"
                 f"{status_final_operacao}\n"
             )
 
-        if ("ELITE" in sinal_ativo or "CHANCE" in sinal_ativo or "ROSA" in sinal_ativo):
-            st.session_state.total_operacoes += 1
-            st.session_state.score_medio = int(((st.session_state.score_medio * (st.session_state.total_operacoes - 1)) + score_final) / st.session_state.total_operacoes)
-            
-            if padrao_atual not in st.session_state.padroes_db: st.session_state.padroes_db[padrao_atual] = {"wins": 0, "loss": 0, "ultimo_winrate": 0.0}
-            if not deu_green:
-                st.session_state.quarentena[st.session_state.ultimo_contexto] = 15 if "ROSA" in sinal_ativo else 45
-                st.session_state.erros += 1
-                st.session_state.ultimos_resultados.append("LOSS")
-                st.session_state.perdas_consecutivas += 1
-                st.session_state.padroes_db[padrao_atual]["loss"] += 1
-                if st.session_state.perdas_consecutivas >= 4:
-                    st.session_state.modo_defensivo = True
-                    st.session_state.cooldown_rodadas = 15
-                if st.session_state.ultimo_contexto not in st.session_state.memoria_negativa: st.session_state.memoria_negativa[st.session_state.ultimo_contexto] = 0
-                st.session_state.memoria_negativa[st.session_state.ultimo_contexto] += 1
-            else:
-                if len(st.session_state.memoria_positiva) >= 300: st.session_state.memoria_positiva.pop(0)
-                if st.session_state.ultimo_contexto not in st.session_state.memoria_positiva: st.session_state.memoria_positiva.append(st.session_state.ultimo_contexto)
-                st.session_state.acertos += 1
-                st.session_state.ultimos_resultados.append("WIN")
-                st.session_state.perdas_consecutivas = 0
-                st.session_state.modo_defensivo = False
-                st.session_state.cooldown_rodadas = 0
-                st.session_state.padroes_db[padrao_atual]["wins"] += 1
-                
-            st.session_state.padroes_db[padrao_atual]["ultimo_winrate"] = round((st.session_state.padroes_db[padrao_atual]["wins"] / (st.session_state.padroes_db[padrao_atual]["wins"] + st.session_state.padroes_db[padrao_atual]["loss"])) * 100, 1)
-                
-        saldo = 1000.0 + (st.session_state.acertos * 10.0) - (st.session_state.erros * 10.0)
-        dd_atual = (1000.0 - saldo) / 1000.0 if saldo < 1000.0 else 0.0
-        if dd_atual > st.session_state.max_drawdown_calc: st.session_state.max_drawdown_calc = dd_atual
-        if len(st.session_state.ultimos_resultados) > 50: st.session_state.ultimos_resultados.pop(0)
-
+    # 2. ATUALIZA O HISTÓRICO COM A NOVA VELA DIGITADA
     if len(st.session_state.historico) >= 5: st.session_state.banco_padroes.append({"padrao": brain.gerar_padrao(st.session_state.historico), "resultado": vela})
     st.session_state.historico.append(vela)
     st.session_state.distancia_rosa = 0 if vela >= 10 else st.session_state.distancia_rosa + 1
     if st.session_state.perdas_consecutivas > st.session_state.max_loss_streak: st.session_state.max_loss_streak = st.session_state.perdas_consecutivas
+
+    # 3. CALCULA O SINAL DO FUTURO E CONSERVA PARA O PRÓXIMO CLIQUE
+    if len(st.session_state.historico) >= 30:
+        p_futuro = brain.gerar_padrao(st.session_state.historico)
+        f_futuro = brain.detectar_fase(st.session_state.historico)
+        r_futuro = brain.calcular_pressao_radar(st.session_state.historico, janela_ativa)
+        e_futuro = brain.detectar_expansao(st.session_state.historico)
+        oco_f, win_p_f, win_r_f = analisar_banco_avancado(p_futuro)
         
+        ret_adap = brain.calcular_score_adaptive(st.session_state.historico, tx_roxa, 0, oco_f, win_p_f, win_r_f, st.session_state.ultimos_resultados, janela_ativa)
+        ad_score_f, aud_dict_f = ret_adap if isinstance(ret_adap, tuple) else (ret_adap, {"penalidade_exaustao":0,"penalidade_degradacao":0,"penalidade_eficiencia":0,"penalidade_fase":0})
+        
+        sinal_previsto, score_previsto = brain.calcular_consenso(ad_score_f, r_futuro, e_futuro, f_futuro, 0, False, st.session_state.historico, win_p_f, win_r_f)
+        dens_f = sum(1 for x in st.session_state.historico[-15:] if x >= 2)
+        
+        st.session_state.sinal_pendente_julgamento = sinal_previsto
+        st.session_state.contexto_pendente_julgamento = f"{p_futuro}_{f_futuro}"
+        st.session_state.snapshot_metricas_rodada = {
+            "padrao": p_futuro, "fase": f_futuro, "radar": r_futuro, "expansao": e_futuro,
+            "win_p": win_p_f, "win_r": win_r_f, "adaptive": ad_score_f, "score_final": score_previsto,
+            "dist_rosa": st.session_state.distancia_rosa, "densidade": dens_f,
+            "p_ex": aud_dict_f.get("penalidade_exaustao",0), "p_de": aud_dict_f.get("penalidade_degradacao",0),
+            "p_ef": aud_dict_f.get("penalidade_eficiencia",0), "p_fa": aud_dict_f.get("penalidade_fase",0)
+        }
+    
+    saldo = 1000.0 + (st.session_state.acertos * 10.0) - (st.session_state.erros * 10.0)
+    dd_atual = (1000.0 - saldo) / 1000.0 if saldo < 1000.0 else 0.0
+    if dd_atual > st.session_state.max_drawdown_calc: st.session_state.max_drawdown_calc = dd_atual
+    
     salvar_memoria()
     st.rerun()
 
@@ -500,7 +507,6 @@ with col1:
     st.markdown(f"**⚡ Radar Rosa (Micro Pressão Suavizada):** {radar_score}%")
     st.markdown(f"**📉 Winrate Histórico do Padrão:** {winrate_padrao:.1f}%")
     st.markdown(f"**📉 Taxa Roxa Global:** {tx_roxa:.1f}%")
-    st.markdown(f"**🔥 Taxa Roxa Quente (Contexto 50 Velas):** {tx_roxa_quente_ctx:.1f}%")
     st.markdown(f"**⚡ Densidade Roxa (Últimas 15 rds):** {densidade_roxa_v}/15")
 with col2:
     st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
@@ -533,7 +539,6 @@ if st.session_state.padroes_db:
         for pad, stats in st.session_state.padroes_db.items():
             st.markdown(f"🔹 **Padrão:** `{pad}` | 🟢 Wins: **{stats['wins']}** | 🔴 Loss: **{stats['loss']}** | 📊 Winrate: **{stats['ultimo_winrate']}%**")
 
-# --- 🎯 CORREÇÃO CRÍTICA DO RESET: RECRIAÇÃO OPERACIONAL E IMEDIATA DO CSV ---
 if st.button("RESETAR ECOSSISTEMA TOTAL"):
     if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
     if os.path.exists(ARQUIVO_AUDITORIA_CSV): os.remove(ARQUIVO_AUDITORIA_CSV)
@@ -548,5 +553,8 @@ if st.button("RESETAR ECOSSISTEMA TOTAL"):
     st.session_state.auditoria_assertividade = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
     st.session_state.log_auditoria_completo = []
     st.session_state.freio_dominante = {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0}
+    st.session_state.sinal_pendente_julgamento = "AGUARDAR"
+    st.session_state.contexto_pendente_julgamento = None
+    st.session_state.snapshot_metricas_rodada = {}
     salvar_memoria()
     st.rerun()
