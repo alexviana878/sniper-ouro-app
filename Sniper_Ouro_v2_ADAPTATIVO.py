@@ -9,6 +9,9 @@ import brain
 
 st.set_page_config(page_title="Sniper Ouro Ecossistema IA", page_icon="🎯", layout="centered")
 
+# --- PARAMETRIZAÇÃO E CONTROLE DE VERSÃO DE LABORATÓRIO ---
+VERSAO_CEREBRO = "10.7.2"  
+
 SENHA_CORRETA = "AlexMestre2026"
 if "autenticado" not in st.session_state: st.session_state.autenticado = False
 
@@ -37,7 +40,15 @@ h1,h2,h3,p,label { color: white !important; }
 </style>
 """, unsafe_allow_html=True)
 
-ARQUIVO_MEMORIA = "memoria_sniper.json"
+# --- CONFIGURAÇÃO DE DIRETÓRIOS E COMPLIANCE DA FASE 1 ---
+PASTA_DADOS = "dados"
+if not os.path.exists(PASTA_DADOS):
+    os.makedirs(PASTA_DADOS)
+
+ARQUIVO_MEMORIA = os.path.join(PASTA_DADOS, "memoria_sniper.json")
+ARQUIVO_AUDITORIA_CSV = os.path.join(PASTA_DADOS, "historico_sniper.csv")
+
+CABECALHO_CSV = "id_rodada,versao_cerebro,timestamp,padrao,fase_macro,vela,cor,radar,expansao,winrate_historico_padrao,winrate_recente_padrao,core_adaptive,distancia_rosa,densidade_rosa_15,freio_dominante,decisao_sinal,resultado_status\n"
 
 def carregar_memoria():
     if os.path.exists(ARQUIVO_MEMORIA):
@@ -48,7 +59,6 @@ def carregar_memoria():
                 if "auditoria_sinais" not in dados: dados["auditoria_sinais"] = {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0}
                 if "auditoria_assertividade" not in dados: dados["auditoria_assertividade"] = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
                 if "log_auditoria_completo" not in dados: dados["log_auditoria_completo"] = []
-                # Inicialização do novo contador de freio dominante
                 if "freio_dominante" not in dados: dados["freio_dominante"] = {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0}
                 return dados
         except: pass
@@ -94,6 +104,11 @@ def salvar_memoria():
         "freio_dominante": st.session_state.freio_dominante
     }
     with open(ARQUIVO_MEMORIA, "w") as f: json.dump(dados, f)
+
+# Inicializa cabeçalho estável do CSV caso ele não exista
+if not os.path.exists(ARQUIVO_AUDITORIA_CSV):
+    with open(ARQUIVO_AUDITORIA_CSV, "w") as csv_f:
+        csv_f.write(CABECALHO_CSV)
 
 if "dados_carregados" not in st.session_state:
     dados = carregar_memoria()
@@ -285,7 +300,7 @@ else:
     risco_ruina_status = "COLETANDO"
     densidade_roxa_v = 0
 
-st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:#7c3aed;font-size:14px;"><b>PARTIÇÃO ATIVA:</b> {st.session_state.bloco_validacao}</p></div>', unsafe_allow_html=True)
+st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:#7c3aed;font-size:14px;"><b>PARTIÇÃO ATIVA:</b> {st.session_state.bloco_validacao} | 🧠 <b>CÉREBRO V:</b> {VERSAO_CEREBRO}</p></div>', unsafe_allow_html=True)
 
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
@@ -299,7 +314,6 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         nome_sinal_limpo = "CHANCE ELITE" if "CHANCE ELITE" in sinal_ativo else ("ROSA ELITE" if "ROSA ELITE" in sinal_ativo else ("OBSERVANDO" if "OBSERVANDO" in sinal_ativo else "AGUARDAR"))
         st.session_state.auditoria_sinais[nome_sinal_limpo] += 1
         
-        # Leitura e acumulação dos freios ativos na rodada
         p_ex = auditoria_dict.get("penalidade_exaustao", 0)
         p_de = auditoria_dict.get("penalidade_degradacao", 0)
         p_ef = auditoria_dict.get("penalidade_eficiencia", 0)
@@ -310,24 +324,14 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         if p_ef > 0: st.session_state.auditoria_freios["eficiencia"] += 1
         if p_fa > 0: st.session_state.auditoria_freios["fase_macro"] += 1
         
-        # 📊 CÁLCULO LOGÍSTICO DO FREIO DOMINANTE (Quem tirou mais pontos nesta rodada?)
-        valores_freios = {
-            "EXAUSTÃO": p_ex,
-            "DEGRADAÇÃO": p_de,
-            "EFICIÊNCIA": p_ef,
-            "FASE MACRO": p_fa
-        }
+        valores_freios = {"EXAUSTÃO": p_ex, "DEGRADAÇÃO": p_de, "EFICIÊNCIA": p_ef, "FASE MACRO": p_fa}
         
-        # Se houve alguma penalidade aplicada, encontra a maior e incrementa o freio dominante
         if max(valores_freios.values()) > 0:
-            freio_vencedor = max(valores_freios, key=valores_freios.get)
-            st.session_state.freio_dominante[freio_vencedor] += 1
+            freio_escolhido = max(valores_freios, key=valores_freios.get)
+            st.session_state.freio_dominante[freio_escolhido] += 1
         else:
+            freio_escolhido = "NENHUM"
             st.session_state.freio_dominante["NENHUM"] += 1
-
-        if nome_sinal_limpo in st.session_state.auditoria_assertividade:
-            if deu_green: st.session_state.auditoria_assertividade[nome_sinal_limpo]["wins"] += 1
-            else: st.session_state.auditoria_assertividade[nome_sinal_limpo]["loss"] += 1
 
         st.session_state.log_auditoria_completo.append({
             "rodada": len(st.session_state.historico) + 1,
@@ -341,6 +345,33 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             "resultado_vela": vela,
             "resultado_status": "WIN" if deu_green else "LOSS"
         })
+
+        # --- 💥 MELHORIA RECOMENDADA: ID DE SEGURANÇA MÁXIMA COM SEGUNDOS ---
+        time_stamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        id_rodada = f"{time_stamp}{len(st.session_state.historico) + 1:03d}"
+        cor_vela = "ROSA" if vela >= 10.0 else ("ROXA" if vela >= 2.0 else "AZUL")
+        status_final_operacao = "WIN" if deu_green else "LOSS"
+
+        with open(ARQUIVO_AUDITORIA_CSV, "a") as csv_f:
+            csv_f.write(
+                f"{id_rodada},"
+                f"{VERSAO_CEREBRO},"
+                f"{datetime.now().strftime('%Y-%m-%d %H:%M:%S')},"
+                f"{padrao_atual},"
+                f"{fase_macro},"
+                f"{vela},"
+                f"{cor_vela},"
+                f"{radar_score},"
+                f"{expansion_score},"
+                f"{winrate_padrao:.2f},"
+                f"{winrate_recente_padrao:.2f},"
+                f"{adaptive_score},"
+                f"{st.session_state.distancia_rosa},"
+                f"{densidade_roxa_v},"
+                f"{freio_escolhido},"
+                f"{nome_sinal_limpo},"
+                f"{status_final_operacao}\n"
+            )
 
         if ("ELITE" in sinal_ativo or "CHANCE" in sinal_ativo or "ROSA" in sinal_ativo):
             st.session_state.total_operacoes += 1
@@ -502,8 +533,14 @@ if st.session_state.padroes_db:
         for pad, stats in st.session_state.padroes_db.items():
             st.markdown(f"🔹 **Padrão:** `{pad}` | 🟢 Wins: **{stats['wins']}** | 🔴 Loss: **{stats['loss']}** | 📊 Winrate: **{stats['ultimo_winrate']}%**")
 
+# --- 🎯 CORREÇÃO CRÍTICA DO RESET: RECRIAÇÃO OPERACIONAL E IMEDIATA DO CSV ---
 if st.button("RESETAR ECOSSISTEMA TOTAL"):
     if os.path.exists(ARQUIVO_MEMORIA): os.remove(ARQUIVO_MEMORIA)
+    if os.path.exists(ARQUIVO_AUDITORIA_CSV): os.remove(ARQUIVO_AUDITORIA_CSV)
+    
+    with open(ARQUIVO_AUDITORIA_CSV, "w") as csv_f:
+        csv_f.write(CABECALHO_CSV)
+        
     st.session_state.historico, st.session_state.banco_padroes, st.session_state.distancia_rosa, st.session_state.acertos, st.session_state.erros, st.session_state.ultimos_resultados, st.session_state.quarentena, st.session_state.memoria_positiva, st.session_state.memoria_negativa = [], [], 0, 0, 0, [], {}, [], {}
     st.session_state.perdas_consecutivas, st.session_state.max_loss_streak, st.session_state.modo_defensivo, st.session_state.cooldown_rodadas, st.session_state.sinais_ignorados, st.session_state.max_drawdown_calc, st.session_state.padroes_db, st.session_state.bloco_validacao, st.session_state.score_medio, st.session_state.total_operacoes = 0, 0, False, 0, 0, 0.0, {}, "NENHUM", 0, 0
     st.session_state.auditoria_freios = {"exaustao": 0, "degradacao": 0, "eficiencia": 0, "fase_macro": 0}
