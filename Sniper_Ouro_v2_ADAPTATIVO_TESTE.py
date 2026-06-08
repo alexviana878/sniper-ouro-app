@@ -248,14 +248,31 @@ if len(st.session_state.historico) >= 30:
     banco_global = analisar_banco_global()
 
     tx_roxa = 0
-    if padrao_atual in banco_global:
-        tx_roxa = (banco_global[padrao_atual]["roxa"] / ocorrencias) * 100 if ocorrencias > 0 else 0
+
+if padrao_atual in banco_global:
+    tx_roxa = (banco_global[padrao_atual]["roxa"] / ocorrencias) * 100 if ocorrencias > 0 else 0
+
+ultimas50 = (
+    st.session_state.historico[-50:]
+    if len(st.session_state.historico) >= 50
+    else st.session_state.historico
+)
+
+tx_roxa_quente_ctx = (
+    sum(1 for x in ultimas50 if x >= 2)
+    / len(ultimas50)
+) * 100 if len(ultimas50) > 0 else 0
 
     return_adaptive = brain.calcular_score_adaptive(
-        st.session_state.historico, tx_roxa, 0, 
-        ocorrencias, winrate_padrao, winrate_recente_padrao, 
-        st.session_state.ultimos_resultados, janela_ativa
-    )
+    st.session_state.historico,
+    tx_roxa,
+    tx_roxa_quente_ctx,
+    ocorrencias,
+    winrate_padrao,
+    winrate_recente_padrao,
+    st.session_state.ultimos_resultados,
+    janela_ativa
+)
     
     if isinstance(return_adaptive, tuple):
         adaptive_score, auditoria_dict = return_adaptive
