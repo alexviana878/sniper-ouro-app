@@ -244,8 +244,8 @@ if len(st.session_state.historico) >= 30:
     expansion_score = brain.detectar_expansao(st.session_state.historico)
     aceleracoes = brain.detectar_aceleracao(st.session_state.historico)
     
-    ocorrencias, winrate_padrao, winrate_recente_padrao = analisar_banco_avancado(padrao_atual)
-    banco_global = analisar_banco_global()
+       ocorrencias, winrate_padrao, winrate_recente_padrao = analisar_banco_avancado(padrao_atual)
+banco_global = analisar_banco_global()
 
        tx_roxa = 0
 
