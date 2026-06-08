@@ -5,7 +5,7 @@ import os
 import sys
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import brain
+import brain_laboratorio as brain
 
 st.set_page_config(page_title="Sniper Ouro Ecossistema IA", page_icon="🎯", layout="centered")
 
