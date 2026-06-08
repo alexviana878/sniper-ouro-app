@@ -263,7 +263,7 @@ tx_roxa_quente_ctx = (
     / len(ultimas50)
 ) * 100 if len(ultimas50) > 0 else 0
 
-    return_adaptive = brain.calcular_score_adaptive(
+return_adaptive = brain.calcular_score_adaptive(
     st.session_state.historico,
     tx_roxa,
     tx_roxa_quente_ctx,
