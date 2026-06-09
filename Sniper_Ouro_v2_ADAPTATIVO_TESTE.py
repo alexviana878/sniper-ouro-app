@@ -250,16 +250,16 @@ if len(st.session_state.historico) >= 30:
     if padrao_atual in banco_global:
         tx_roxa = (banco_global[padrao_atual]["roxa"] / ocorrencias) * 100 if ocorrencias > 0 else 0
 
-    ultimas50 = (
+    text_50 = (
         st.session_state.historico[-50:]
         if len(st.session_state.historico) >= 50
         else st.session_state.historico
     )
 
     tx_roxa_quente_ctx = (
-        sum(1 for x in ultimas50 if x >= 2)
-        / len(ultimas50)
-    ) * 100 if len(ultimas50) > 0 else 0
+        sum(1 for x in text_50 if x >= 2)
+        / len(text_50)
+    ) * 100 if len(text_50) > 0 else 0
 
     return_adaptive = brain.calcular_score_adaptive(
         st.session_state.historico,
@@ -288,7 +288,8 @@ if len(st.session_state.historico) >= 30:
     else: faixa_rosa = "LONGA"
     
     contexto_chave = f"{padrao_atual}_{fase_macro}_{faixa_rosa}"
-    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 0, False, st.session_state.historico, winrate_padrao, winrate_recente_padrao)
+    
+    sinal_final, score_final = brain.calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, tx_roxa_quente_ctx, False, st.session_state.historico, winrate_padrao, winrate_recente_padrao)
     
     rm = brain.RiskManager()
     risco_ruina_status = rm.calcular_risco_ruina(st.session_state.acertos, st.session_state.erros, st.session_state.max_loss_streak)
@@ -408,10 +409,29 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         e_futuro = brain.detectar_expansao(st.session_state.historico)
         oco_f, win_p_f, win_r_f = analisar_banco_avancado(p_futuro)
         
-        ret_adap = brain.calcular_score_adaptive(st.session_state.historico, tx_roxa, 0, oco_f, win_p_f, win_r_f, st.session_state.ultimos_resultados, janela_ativa)
+        ultimas50_f = (
+            st.session_state.historico[-50:]
+            if len(st.session_state.historico) >= 50
+            else st.session_state.historico
+        )
+        tx_roxa_quente_ctx_f = (
+            sum(1 for x in ultimas50_f if x >= 2)
+            / len(ultimas50_f)
+        ) * 100 if len(ultimas50_f) > 0 else 0
+        
+        ret_adap = brain.calcular_score_adaptive(
+            st.session_state.historico, 
+            tx_roxa, 
+            tx_roxa_quente_ctx_f, 
+            oco_f, 
+            win_p_f, 
+            win_r_f, 
+            st.session_state.ultimos_resultados, 
+            janela_ativa
+        )
         ad_score_f, aud_dict_f = ret_adap if isinstance(ret_adap, tuple) else (ret_adap, {"penalidade_exaustao":0,"penalidade_degradacao":0,"penalidade_eficiencia":0,"penalidade_fase":0})
         
-        sinal_previsto, score_previsto = brain.calcular_consenso(ad_score_f, r_futuro, e_futuro, f_futuro, 0, False, st.session_state.historico, win_p_f, win_r_f)
+        sinal_previsto, score_previsto = brain.calcular_consenso(ad_score_f, r_futuro, e_futuro, f_futuro, tx_roxa_quente_ctx_f, False, st.session_state.historico, win_p_f, win_r_f)
         dens_f = sum(1 for x in st.session_state.historico[-15:] if x >= 2)
         
         st.session_state.sinal_pendente_julgamento = sinal_previsto
@@ -423,10 +443,6 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             "p_ex": aud_dict_f.get("penalidade_exaustao",0), "p_de": aud_dict_f.get("penalidade_degradacao",0),
             "p_ef": aud_dict_f.get("penalidade_eficiencia",0), "p_fa": aud_dict_f.get("penalidade_fase",0)
         }
-    
-    saldo = 1000.0 + (st.session_state.acertos * 10.0) - (st.session_state.erros * 10.0)
-    dd_atual = (1000.0 - saldo) / 1000.0 if saldo < 1000.0 else 0.0
-    if dd_atual > st.session_state.max_drawdown_calc: st.session_state.max_drawdown_calc = dd_atual
     
     salvar_memoria()
     st.rerun()
@@ -511,6 +527,15 @@ if total_rodadas_auditadas > 0:
         st.json(st.session_state.log_auditoria_completo[-20:])
 
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
+
+# --- 🔥 INCLUSÃO TEMPORÁRIA: PAINEL DE AUDITORIA DE NÚMEROS BRUTOS DO LAB ---
+st.write("Adaptive:", adaptive_score)
+st.write("Radar:", radar_score)
+st.write("Expansion:", expansion_score)
+st.write("Tx Roxa Quente:", tx_roxa_quente_ctx)
+st.write("Winrate Padrão:", winrate_padrao)
+st.write("Winrate Recente:", winrate_recente_padrao)
+
 col1, col2 = st.columns(2)
 with col1:
     st.markdown(f"**🛡️ Cérebro Defensivo (Fase Macro):** {fase_macro}")
