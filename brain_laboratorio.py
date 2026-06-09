@@ -1,7 +1,7 @@
 # brain_laboratorio.py
 # =========================================================
 # ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.7.2
-# STATUS: LABORATÓRIO AVANÇADO / AJUSTE DE EXAUSTÃO DELTA
+# STATUS: LABORATÓRIO AVANÇADO / ADAPTATIVE GATEWAY ADJUSTMENT
 # =========================================================
 
 def classificar_vela(valor):
@@ -198,6 +198,8 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
     
     if expansion_score >= 80 and adaptive_score >= 72 and tx_roxa_quente_ctx >= 52: return "🌸 ROSA ELITE", int(score_final)
     if adaptive_score >= 62 and radar_score >= 48 and tx_roxa_quente_ctx >= 44: return "🟢 CHANCE ELITE", int(score_final)
-    if adaptive_score >= 50: return "🟡 OBSERVANDO", int(score_final)
+    
+    # --- 🔥 AJUSTE DE GARGALO NO LABORATÓRIO: FLEXIBILIZAÇÃO DO ZONEAMENTO ---
+    if adaptive_score >= 42: return "🟡 OBSERVANDO", int(score_final)
 
     return "🔴 AGUARDAR", int(score_final)
