@@ -1,7 +1,7 @@
 # brain_laboratorio.py
 # =========================================================
 # ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.7.2
-# STATUS: LABORATÓRIO AVANÇADO / ADAPTATIVE GATEWAY ADJUSTMENT
+# STATUS: LABORATÓRIO AVANÇADO / RECALIBRAGEM EXAUSTÃO DELTA II
 # =========================================================
 
 def classificar_vela(valor):
@@ -75,11 +75,12 @@ def detectar_exaustao(historico):
     rosas = len([v for v in ultimas8 if v >= 10])
     baixos = len([v for v in ultimas8 if v <= 1.20])
 
-    if media8 >= 6.0:
+    # --- 🔥 ATUALIZAÇÃO RECALIBRADA: FECHAMENTO DO GARGALO DE EXAUSTÃO ---
+    if media8 >= 8.0:
         return True
-    if altos >= 6:
+    if altos >= 7:
         return True
-    if rosas >= 4:
+    if rosas >= 5:
         return True
     if baixos >= 7:
         return True
