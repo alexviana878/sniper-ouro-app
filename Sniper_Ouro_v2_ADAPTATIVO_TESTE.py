@@ -7,7 +7,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import brain_laboratorio as brain
 
-st.set_page_config(page_title="Sniper Ouro Ecossistema IA", page_icon="🎯", layout="centered")
+st.set_page_config(page_title="Sniper Ouro Ecossistema IA (TESTE)", page_icon="🎯", layout="centered")
 
 # --- PARAMETRIZAÇÃO E CONTROLE DE VERSÃO DE LABORATÓRIO ---
 VERSAO_CEREBRO = "10.7.2"  
@@ -16,7 +16,7 @@ SENHA_CORRETA = "AlexMestre2026"
 if "autenticado" not in st.session_state: st.session_state.autenticado = False
 
 if not st.session_state.autenticado:
-    st.markdown("<h1 style='text-align:center;color:#ef4444;'>🔒 ECOSSISTEMA SNIPER IA</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align:center;color:#ef4444;'>🔒 ECOSSISTEMA SNIPER IA (TESTE)</h1>", unsafe_allow_html=True)
     senha = st.text_input("Digite sua chave master:", type="password")
     if st.button("ATIVAR ECOSSISTEMA"):
         if senha == SENHA_CORRETA:
@@ -44,8 +44,8 @@ PASTA_DADOS = "dados"
 if not os.path.exists(PASTA_DADOS):
     os.makedirs(PASTA_DADOS)
 
-ARQUIVO_MEMORIA = os.path.join(PASTA_DADOS, "memoria_sniper.json")
-ARQUIVO_AUDITORIA_CSV = os.path.join(PASTA_DADOS, "historico_sniper.csv")
+ARQUIVO_MEMORIA = os.path.join(PASTA_DADOS, "memoria_sniper_teste.json")
+ARQUIVO_AUDITORIA_CSV = os.path.join(PASTA_DADOS, "historico_sniper_teste.csv")
 
 CABECALHO_CSV = "id_rodada,versao_cerebro,timestamp,padrao,fase_macro,vela,cor,radar,expansao,winrate_historico_padrao,winrate_recente_padrao,core_adaptive,distancia_rosa,densidade_rosa_15,freio_dominante,decisao_sinal,resultado_status\n"
 
@@ -159,7 +159,7 @@ janela_ativa = agora.minute in minutos_pagantes
 
 st.markdown(f'<div class="clock-card"><h2 style="color:#00ff66 !important;margin:0;">{agora.strftime("%H:%M:%S")}</h2><p style="margin:0;color:#00ff66 !important;">{"⚠️ JANELA ATIVA DE EXPLOSÃO" if janela_ativa else "ECOSSISTEMA MONITORANDO"}</p></div>', unsafe_allow_html=True)
 
-st.title("🎯 SNIPER OURO IA - LAB AUDITORIA QUANT G9")
+st.title("🎯 SNIPER OURO IA - LAB AUDITORIA (TESTES)")
 
 with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expanded=False):
     bloco_opcao = st.radio("Escolha a partição de dados para testar sobrevivência:", ["Carga Completa (Sem Divisão)", "Bloco 1 (Velas 1 a 10.000)", "Bloco 2 (Velas 10.001 a 15.000 - Fora da Amostra)", "Bloco 3 (Velas 15.001 a 20.000 - Fora da Amostra)"])
@@ -241,7 +241,6 @@ if len(st.session_state.historico) >= 30:
     fase_macro = brain.detectar_fase(st.session_state.historico)
     radar_score = brain.calcular_pressao_radar(st.session_state.historico, janela_ativa)
     expansion_score = brain.detectar_expansao(st.session_state.historico)
-    aceleracoes = brain.detectar_aceleracao(st.session_state.historico)
     
     ocorrencias, winrate_padrao, winrate_recente_padrao = analisar_banco_avancado(padrao_atual)
     banco_global = analisar_banco_global()
@@ -250,16 +249,8 @@ if len(st.session_state.historico) >= 30:
     if padrao_atual in banco_global:
         tx_roxa = (banco_global[padrao_atual]["roxa"] / ocorrencias) * 100 if ocorrencias > 0 else 0
 
-    text_50 = (
-        st.session_state.historico[-50:]
-        if len(st.session_state.historico) >= 50
-        else st.session_state.historico
-    )
-
-    tx_roxa_quente_ctx = (
-        sum(1 for x in text_50 if x >= 2)
-        / len(text_50)
-    ) * 100 if len(text_50) > 0 else 0
+    ultimas50 = st.session_state.historico[-50:] if len(st.session_state.historico) >= 50 else st.session_state.historico
+    tx_roxa_quente_ctx = (sum(1 for x in ultimas50 if x >= 2) / len(ultimas50)) * 100 if len(ultimas50) > 0 else 0
 
     return_adaptive = brain.calcular_score_adaptive(
         st.session_state.historico,
@@ -300,6 +291,7 @@ else:
     risco_ruina_status = "COLETANDO"
     densidade_roxa_v = 0
     contexto_chave = "---"
+    tx_roxa_quente_ctx = 0
 
 st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:#7c3aed;font-size:14px;"><b>PARTIÇÃO ATIVA:</b> {st.session_state.bloco_validacao} | 🧠 <b>CÉREBRO V:</b> {VERSAO_CEREBRO}</p></div>', unsafe_allow_html=True)
 
@@ -409,15 +401,8 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         e_futuro = brain.detectar_expansao(st.session_state.historico)
         oco_f, win_p_f, win_r_f = analisar_banco_avancado(p_futuro)
         
-        ultimas50_f = (
-            st.session_state.historico[-50:]
-            if len(st.session_state.historico) >= 50
-            else st.session_state.historico
-        )
-        tx_roxa_quente_ctx_f = (
-            sum(1 for x in ultimas50_f if x >= 2)
-            / len(ultimas50_f)
-        ) * 100 if len(ultimas50_f) > 0 else 0
+        ultimas50_f = st.session_state.historico[-50:] if len(st.session_state.historico) >= 50 else st.session_state.historico
+        tx_roxa_quente_ctx_f = (sum(1 for x in ultimas50_f if x >= 2) / len(ultimas50_f)) * 100 if len(ultimas50_f) > 0 else 0
         
         ret_adap = brain.calcular_score_adaptive(
             st.session_state.historico, 
@@ -528,13 +513,14 @@ if total_rodadas_auditadas > 0:
 
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 
-# --- 🔥 INCLUSÃO TEMPORÁRIA: PAINEL DE AUDITORIA DE NÚMEROS BRUTOS DO LAB ---
-st.write("Adaptive:", adaptive_score)
-st.write("Radar:", radar_score)
-st.write("Expansion:", expansion_score)
-st.write("Tx Roxa Quente:", tx_roxa_quente_ctx)
-st.write("Winrate Padrão:", winrate_padrao)
-st.write("Winrate Recente:", winrate_recente_padrao)
+# --- 🔥 EXIBIÇÃO EXPLICITA DE AUDITORIA EXIGIDA PELO LAB ---
+st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍDOS)")
+st.write(f"📊 **Adaptive Score:** `{adaptive_score}`")
+st.write(f"⚡ **Radar Score:** `{radar_score}`")
+st.write(f"🌸 **Expansion Score:** `{expansion_score}`")
+st.write(f"🔥 **Tx Roxa Quente:** `{tx_roxa_quente_ctx:.2f}%`")
+st.write(f"📉 **Winrate Padrão Histórico:** `{winrate_padrao:.2f}%`")
+st.write(f"🥀 **Winrate Recente Padrão:** `{winrate_recente_padrao:.2f}%`")
 
 col1, col2 = st.columns(2)
 with col1:
