@@ -135,7 +135,6 @@ if "dados_carregados" not in st.session_state:
     st.session_state.log_auditoria_completo = dados.get("log_auditoria_completo", [])
     st.session_state.freio_dominante = dados.get("freio_dominante", {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0})
     
-    # CONSERVAÇÃO ESTÁVEL DO ESTADO ANTERIOR DA RODADA (Mapeamento limpo de strings para evitar Hipótese 3)
     st.session_state.sinal_pendente_julgamento = "AGUARDAR"
     st.session_state.contexto_pendente_julgamento = None
     st.session_state.snapshot_metricas_rodada = {}
@@ -244,11 +243,10 @@ if len(st.session_state.historico) >= 30:
     expansion_score = brain.detectar_expansao(st.session_state.historico)
     aceleracoes = brain.detectar_aceleracao(st.session_state.historico)
     
-       ocorrencias, winrate_padrao, winrate_recente_padrao = analisar_banco_avancado(padrao_atual)
-banco_global = analisar_banco_global()
-
-       tx_roxa = 0
-
+    ocorrencias, winrate_padrao, winrate_recente_padrao = analisar_banco_avancado(padrao_atual)
+    banco_global = analisar_banco_global()
+    
+    tx_roxa = 0
     if padrao_atual in banco_global:
         tx_roxa = (banco_global[padrao_atual]["roxa"] / ocorrencias) * 100 if ocorrencias > 0 else 0
 
@@ -307,24 +305,18 @@ st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
-# --- 🔥 BLINDAGEM DA PRIORIDADE 1: ORDEM CRÍTICA DE EXECUÇÃO DE CALLBACK ---
 if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
-    # 1. PEGA O SINAL QUE FICOU AGUARDANDO A VELA NA RODADA PASSADA
     sinal_emitido_anterior = st.session_state.sinal_pendente_julgamento
     contexto_anterior = st.session_state.contexto_pendente_julgamento
     snapshot = st.session_state.snapshot_metricas_rodada
     
     if contexto_anterior is not None:
-        # JULGAMENTO JUSTO DO ALVO
         if "ROSA" in sinal_emitido_anterior: deu_green = vela >= 10.0
         else: deu_green = vela >= 2.0
             
-        # Sincroniza nomenclatura estrita para evitar erros de String (Hipótese 3)
         nome_sinal_limpo = "CHANCE ELITE" if "CHANCE" in sinal_emitido_anterior else ("ROSA ELITE" if "ROSA" in sinal_emitido_anterior else ("OBSERVANDO" if "OBSERVANDO" in sinal_emitido_anterior else "AGUARDAR"))
-        
         st.session_state.auditoria_sinais[nome_sinal_limpo] += 1
         
-        # Puxa penalidades que geraram o sinal passado
         p_ex = snapshot.get("p_ex", 0)
         p_de = snapshot.get("p_de", 0)
         p_ef = snapshot.get("p_ef", 0)
@@ -358,7 +350,6 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             "resultado_status": status_final_operacao
         })
 
-        # SÓ SOMA NA BANCA MASTER SE FOR OPERAÇÃO REAL EMITIDA (ELITE OU CHANCE)
         if "ELITE" in nome_sinal_limpo or "CHANCE" in nome_sinal_limpo:
             st.session_state.total_operacoes += 1
             st.session_state.score_medio = int(((st.session_state.score_medio * (st.session_state.total_operacoes - 1)) + snapshot.get("score_final", 0)) / st.session_state.total_operacoes)
@@ -380,7 +371,6 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             total_p_db = st.session_state.padroes_db[p_atual_snap]["wins"] + st.session_state.padroes_db[p_atual_snap]["loss"]
             st.session_state.padroes_db[p_atual_snap]["ultimo_winrate"] = round((st.session_state.padroes_db[p_atual_snap]["wins"] / total_p_db) * 100, 1)
 
-        # GRAVAÇÃO PERSISTENTE NO DATALOG CSV DA FASE A
         time_stamp = datetime.now().strftime("%Y%m%d%H%M%S")
         id_rodada = f"{time_stamp}{len(st.session_state.historico) + 1:03d}"
         cor_vela = "ROSA" if vela >= 10.0 else ("ROXA" if vela >= 2.0 else "AZUL")
@@ -406,13 +396,11 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
                 f"{status_final_operacao}\n"
             )
 
-    # 2. ATUALIZA O HISTÓRICO COM A NOVA VELA DIGITADA
     if len(st.session_state.historico) >= 5: st.session_state.banco_padroes.append({"padrao": brain.gerar_padrao(st.session_state.historico), "resultado": vela})
     st.session_state.historico.append(vela)
     st.session_state.distancia_rosa = 0 if vela >= 10 else st.session_state.distancia_rosa + 1
     if st.session_state.perdas_consecutivas > st.session_state.max_loss_streak: st.session_state.max_loss_streak = st.session_state.perdas_consecutivas
 
-    # 3. CALCULA O SINAL DO FUTURO E CONSERVA PARA O PRÓXIMO CLIQUE
     if len(st.session_state.historico) >= 30:
         p_futuro = brain.gerar_padrao(st.session_state.historico)
         f_futuro = brain.detectar_fase(st.session_state.historico)
