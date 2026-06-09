@@ -1,7 +1,7 @@
 # brain_laboratorio.py
 # =========================================================
 # ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.7.2
-# STATUS: LABORATÓRIO AVANÇADO / RECALIBRAGEM EXAUSTÃO DELTA III
+# STATUS: LABORATÓRIO AVANÇADO / RECALIBRAGEM DE DEGRADAÇÃO
 # =========================================================
 
 def classificar_vela(valor):
@@ -159,7 +159,13 @@ def calcular_score_adaptive(historico, taxa_roxa, tx_roxa_quente_ctx, ocorrencia
 
     penalidade_fase = 15 if fase == "DEFENSIVA" else 0
     penalidade_eficiencia = 20 if eficiencia_recente <= 0.45 else 0
-    penalidade_degradacao = 25 if (winrate_recente_padrao < 45.0 and ocorrencias >= 5) else 0
+    
+    # =========================================================================================
+    # 🔥 BACKUP DE SEGURANÇA & RECALIBRAGEM EM LABORATÓRIO DO FLUXO DE DEGRADAÇÃO CACHEADO
+    # VERSÃO ANTERIOR: penalidade_degradacao = 25 if (winrate_recente_padrao < 45.0 and ocorrencias >= 5) else 0
+    # =========================================================================================
+    penalidade_degradacao = 15 if (winrate_recente_padrao < 45.0 and ocorrencias >= 5) else 0
+    
     penalidade_exaustao = 15 if detectar_exaustao(historico) else 0
 
     score_intermediario = score_base - penalidade_fase - penalidade_eficiencia - penalidade_degradacao - penalidade_exaustao
