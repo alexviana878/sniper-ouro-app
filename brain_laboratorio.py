@@ -1,7 +1,7 @@
 # brain_laboratorio.py
 # =========================================================
 # ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.7.2
-# STATUS: LABORATÓRIO AVANÇADO / RECALIBRAGEM EXAUSTÃO DELTA II
+# STATUS: LABORATÓRIO AVANÇADO / RECALIBRAGEM EXAUSTÃO DELTA III
 # =========================================================
 
 def classificar_vela(valor):
@@ -75,12 +75,12 @@ def detectar_exaustao(historico):
     rosas = len([v for v in ultimas8 if v >= 10])
     baixos = len([v for v in ultimas8 if v <= 1.20])
 
-    # --- 🔥 ATUALIZAÇÃO RECALIBRADA: FECHAMENTO DO GARGALO DE EXAUSTÃO ---
-    if media8 >= 8.0:
+    # --- 🔥 MICRO-AJUSTE CONTROLADO: ELEVAÇÃO DOS LIMITES DE PICO ---
+    if media8 >= 10.0:
         return True
-    if altos >= 7:
+    if altos >= 8:
         return True
-    if rosas >= 5:
+    if rosas >= 6:
         return True
     if baixos >= 7:
         return True
@@ -200,7 +200,7 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
     if expansion_score >= 80 and adaptive_score >= 72 and tx_roxa_quente_ctx >= 52: return "🌸 ROSA ELITE", int(score_final)
     if adaptive_score >= 62 and radar_score >= 48 and tx_roxa_quente_ctx >= 44: return "🟢 CHANCE ELITE", int(score_final)
     
-    # --- 🔥 AJUSTE DE GARGALO NO LABORATÓRIO: FLEXIBILIZAÇÃO DO ZONEAMENTO ---
+    # --- 🔥 GARGALO MODIFICADO NO LABORATÓRIO: ZONEAMENTO ADAPTATIVO EM 42 ---
     if adaptive_score >= 42: return "🟡 OBSERVANDO", int(score_final)
 
     return "🔴 AGUARDAR", int(score_final)
