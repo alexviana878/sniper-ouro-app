@@ -1,7 +1,7 @@
-# brain.py
+# brain_laboratorio.py
 # =========================================================
 # ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.7.2
-# STATUS: LOGIC FROZEN / TOTALMENTE ALINHADO COM TELEMETRIA
+# STATUS: LABORATÓRIO AVANÇADO / AJUSTE DE EXAUSTÃO DELTA
 # =========================================================
 
 def classificar_vela(valor):
@@ -65,16 +65,25 @@ def detectar_expansao(historico):
     return min(int(score), 100)
 
 def detectar_exaustao(historico):
-    if len(historico) < 6: return False
-    ultimas6 = historico[-6:]
-    media6 = sum(ultimas6) / 6
-    altos = len([v for v in ultimas6 if v >= 5])
-    rosas = len([v for v in ultimas6 if v >= 10])
-    baixos = len([v for v in ultimas6 if v <= 1.30])
-    if media6 >= 4.5: return True       
-    if altos >= 4: return True          
-    if rosas >= 3: return True          
-    if baixos >= 5: return True
+    if len(historico) < 8:
+        return False
+
+    ultimas8 = historico[-8:]
+    media8 = sum(ultimas8) / 8
+
+    altos = len([v for v in ultimas8 if v >= 5])
+    rosas = len([v for v in ultimas8 if v >= 10])
+    baixos = len([v for v in ultimas8 if v <= 1.20])
+
+    if media8 >= 6.0:
+        return True
+    if altos >= 6:
+        return True
+    if rosas >= 4:
+        return True
+    if baixos >= 7:
+        return True
+
     return False
 
 def detectar_aceleracao(historico):
