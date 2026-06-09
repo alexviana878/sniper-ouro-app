@@ -1,8 +1,8 @@
 # brain_laboratorio.py
-# =========================================================
+# ====================================================================
 # ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.7.2
-# STATUS: LABORATÓRIO AVANÇADO / RECALIBRAGEM DE DEGRADAÇÃO
-# =========================================================
+# STATUS: LABORATÓRIO AVANÇADO / ADAPTATIVE RADAR & EXPANSION TRIGGER
+# ====================================================================
 
 def classificar_vela(valor):
     if valor < 1.20: return "X"
@@ -29,12 +29,23 @@ def calcular_pressao_radar(historico, janela_ativa=False):
     pressao = 0
     reds = sum(1 for x in janela if x < 2)
     baixos = sum(1 for x in janela if x < 1.5)
-    if reds >= 7: pressao += 35
-    elif reds >= 5: pressao += 25
-    elif reds >= 3: pressao += 15
-    if baixos >= 5: pressao += 25
-    elif baixos >= 3: pressao += 15
-    if janela_ativa: pressao += 15
+    
+    # --- 🔥 ETAPA 1: RECALIBRAGEM DA PRESSÃO DO RADAR ROSA ---
+    if reds >= 6:
+        pressao += 40
+    elif reds >= 4:
+        pressao += 25
+    elif reds >= 2:
+        pressao += 15
+
+    if baixos >= 4:
+        pressao += 30
+    elif baixos >= 2:
+        pressao += 15
+
+    if janela_ativa:
+        pressao += 15
+
     return min(pressao, 100)
 
 def calcular_compressao(historico):
@@ -58,10 +69,17 @@ def detectar_expansao(historico):
     distancia = calcular_distancia_rosa(historico)
     compressao = calcular_compressao(historico)
     score = 0
-    if distancia >= 10: score += 20
-    if distancia >= 15: score += 35
-    if distancia >= 20: score += 50
-    score += compressao * 0.5
+    
+    # --- 🔥 ETAPA 2: REALINHAMENTO COERENTE DE ALVO EXPANSIVO ROSA ---
+    if distancia >= 6:
+        score += 20
+    if distancia >= 10:
+        score += 30
+    if distancia >= 15:
+        score += 40
+
+    score += compressao * 0.7
+
     return min(int(score), 100)
 
 def detectar_exaustao(historico):
@@ -75,7 +93,6 @@ def detectar_exaustao(historico):
     rosas = len([v for v in ultimas8 if v >= 10])
     baixos = len([v for v in ultimas8 if v <= 1.20])
 
-    # --- 🔥 MICRO-AJUSTE CONTROLADO: ELEVAÇÃO DOS LIMITES DE PICO ---
     if media8 >= 10.0:
         return True
     if altos >= 8:
