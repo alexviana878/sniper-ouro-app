@@ -218,9 +218,13 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
     
     if expansion_score >= 80 and adaptive_score >= 72 and tx_roxa_quente_ctx >= 52: return "🌸 ROSA ELITE", int(score_final)
     
-    # --- 🔥 NOVO FILTRO CIRÚRGICO TESTE: CHANCE ELITE COM EXIGÊNCIA DE EXPANSÃO MÍNIMA ---
-    if (adaptive_score >= 75 and radar_score >= 50 and tx_roxa_quente_ctx >= 44 and expansion_score >= 35): 
+    # --- 🔥 ETAPA 2: APERTO DE ALTA FIDELIDADE DO FILTRO CHANCE ELITE ---
+    if (adaptive_score >= 75 and radar_score >= 60 and tx_roxa_quente_ctx >= 50 and expansion_score >= 50): 
         return "🟢 CHANCE ELITE", int(score_final)
+
+    # --- 🔥 ETAPA 1: ADICIONADO ZONA DE FILTRAGEM INTERMEDIÁRIA PRÉ ELITE ---
+    if (adaptive_score >= 60 and radar_score >= 40):
+        return "🟠 PRÉ ELITE", int(score_final)
         
     if adaptive_score >= 42: return "🟡 OBSERVANDO", int(score_final)
 
