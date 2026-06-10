@@ -217,7 +217,11 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
     if tx_roxa_quente_ctx < 35.0 and radar_score < 35: return "⚠️ PRESSÃO FRACA", int(score_final)
     
     if expansion_score >= 80 and adaptive_score >= 72 and tx_roxa_quente_ctx >= 52: return "🌸 ROSA ELITE", int(score_final)
-    if adaptive_score >= 62 and radar_score >= 48 and tx_roxa_quente_ctx >= 44: return "🟢 CHANCE ELITE", int(score_final)
+    
+    # --- 🔥 NOVO FILTRO CIRÚRGICO TESTE: CHANCE ELITE COM EXIGÊNCIA DE EXPANSÃO MÍNIMA ---
+    if (adaptive_score >= 75 and radar_score >= 50 and tx_roxa_quente_ctx >= 44 and expansion_score >= 35): 
+        return "🟢 CHANCE ELITE", int(score_final)
+        
     if adaptive_score >= 42: return "🟡 OBSERVANDO", int(score_final)
 
     return "🔴 AGUARDAR", int(score_final)
