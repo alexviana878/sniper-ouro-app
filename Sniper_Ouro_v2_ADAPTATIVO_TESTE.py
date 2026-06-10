@@ -7,6 +7,12 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import brain_laboratorio as brain
 
+# --- 🔵 CONEXÃO COM O MOTOR DO AUTOMATIC TRACKER QUANT ---
+try:
+    import auto_tracker as tracker
+except Exception as e:
+    st.error(f"Erro ao importar auto_tracker.py: {e}")
+
 st.set_page_config(page_title="Sniper Ouro Ecossistema IA (TESTE)", page_icon="🎯", layout="centered")
 
 # --- PARAMETRIZAÇÃO E CONTROLE DE VERSÃO DE LABORATÓRIO ---
@@ -299,6 +305,14 @@ st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
 if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
+    try:
+        tracker.atualizar_resultado(
+            vela_final=vela,
+            rodada_atual=len(st.session_state.historico) + 1
+        )
+    except Exception as e:
+        print("ERRO UPDATE TRACKER:", e)
+
     sinal_emitido_anterior = st.session_state.sinal_pendente_julgamento
     contexto_anterior = st.session_state.contexto_pendente_julgamento
     snapshot = st.session_state.snapshot_metricas_rodada
@@ -404,9 +418,14 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         ultimas50_f = st.session_state.historico[-50:] if len(st.session_state.historico) >= 50 else st.session_state.historico
         tx_roxa_quente_ctx_f = (sum(1 for x in ultimas50_f if x >= 2) / len(ultimas50_f)) * 100 if len(ultimas50_f) > 0 else 0
         
+        # --- 🔥 CORE RE-CALIBRATION: HIGIENIZAÇÃO DO DATA LEAKAGE PREDITIVO (TX ROXA FUTURA) ---
+        tx_roxa_f = 0.0
+        if p_futuro in banco_global:
+            tx_roxa_f = (banco_global[p_futuro]["roxa"] / banco_global[p_futuro]["total"]) * 100
+
         ret_adap = brain.calcular_score_adaptive(
             st.session_state.historico, 
-            tx_roxa, 
+            tx_roxa_f, 
             tx_roxa_quente_ctx_f, 
             oco_f, 
             win_p_f, 
@@ -428,6 +447,21 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             "p_ex": aud_dict_f.get("penalidade_exaustao",0), "p_de": aud_dict_f.get("penalidade_degradacao",0),
             "p_ef": aud_dict_f.get("penalidade_eficiencia",0), "p_fa": aud_dict_f.get("penalidade_fase",0)
         }
+        
+        try:
+            tracker.registrar_sinal(
+                tipo=sinal_previsto,
+                adaptive_score=ad_score_f,
+                radar_score=r_futuro,
+                expansion_score=e_futuro,
+                tx_roxa_quente=tx_roxa_quente_ctx_f,
+                padrao=p_futuro,
+                rodada=len(st.session_state.historico) + 1,
+                consenso=score_previsto,
+                fase_macro=f_futuro
+            )
+        except Exception as e:
+            print("ERRO TRACKER:", e)
     
     salvar_memoria()
     st.rerun()
@@ -511,9 +545,37 @@ if total_rodadas_auditadas > 0:
     with st.expander("📥 VER BANCO DATA LOG COMPLETO", expanded=False):
         st.json(st.session_state.log_auditoria_completo[-20:])
 
+# --- 📊 NOVO PAINEL DE METRICAS AVANÇADAS EM REAL TIME DO TRACKER SQLITE ---
+try:
+    dados_sqlite = tracker.obter_metricas_painel()
+    st.markdown('<div class="audit-card"><h3>📊 PAINEL DE MÉTRICAS REAIS (TRACKER SQLITE)</h3></div>', unsafe_allow_html=True)
+    
+    for nome_sinal, info in dados_sqlite.items():
+        with st.expander(f"📈 DETALHAMENTO MATEMÁTICO: {nome_sinal}", expanded=False):
+            c_tr1, c_tr2, c_tr3, c_tr4 = st.columns(4)
+            with c_tr1:
+                st.metric("Emitidos", info["registrados"])
+                st.metric("Wins Reais", info["wins"])
+            with c_tr2:
+                st.metric("Pendentes", info["pendentes"])
+                st.metric("Loss Reais", info["losses"])
+            with c_tr3:
+                st.metric("Winrate Real", f"{info['winrate']}%")
+                st.metric("Média Consenso", f"{info['avg_consenso']}%")
+            with c_tr4:
+                st.metric("Delay Médio Win", f"{info['avg_delay']} rds")
+                st.metric("Resolvidos", info["total_resolvidos"])
+                
+            st.markdown("##### 🎯 Escalonamento de Alvos Atingidos")
+            col_cat1, col_cat2, col_cat3 = st.columns(3)
+            col_cat1.metric("Bateu ≥ 2.0x", f"{info['vol_2x']} vezes")
+            col_cat2.metric("Esticou ≥ 5.0x", f"{info['vol_5x']} vezes")
+            col_cat3.metric("Explodiu Rosa ≥ 10x", f"{info['vol_rosa']} vezes")
+except Exception as e:
+    print("ERRO EXIBIÇÃO PAINEL SQLITE:", e)
+
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 
-# --- 🔥 EXIBIÇÃO EXPLICITA DE AUDITORIA EXIGIDA PELO LAB ---
 st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍDOS)")
 st.write(f"📊 **Adaptive Score:** `{adaptive_score}`")
 st.write(f"⚡ **Radar Score:** `{radar_score}`")
