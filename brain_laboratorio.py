@@ -177,12 +177,7 @@ def calcular_score_adaptive(historico, taxa_roxa, tx_roxa_quente_ctx, ocorrencia
     penalidade_fase = 15 if fase == "DEFENSIVA" else 0
     penalidade_eficiencia = 20 if eficiencia_recente <= 0.45 else 0
     
-    # =========================================================================================
-    # 🔥 BACKUP DE SEGURANÇA & RECALIBRAGEM EM LABORATÓRIO DO FLUXO DE DEGRADAÇÃO CACHEADO
-    # VERSÃO ANTERIOR: penalidade_degradacao = 25 if (winrate_recente_padrao < 45.0 and ocorrencias >= 5) else 0
-    # =========================================================================================
     penalidade_degradacao = 15 if (winrate_recente_padrao < 45.0 and ocorrencias >= 5) else 0
-    
     penalidade_exaustao = 15 if detectar_exaustao(historico) else 0
 
     score_intermediario = score_base - penalidade_fase - penalidade_eficiencia - penalidade_degradacao - penalidade_exaustao
@@ -202,7 +197,8 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
     if detectar_exaustao(historico): return "🛑 EXAUSTÃO DELTA", 0
     if mercado_instavel: return "⚠️ MERCADO INSTÁVEL", 0
 
-    if winrate_padrao >= 50.0 and winrate_recente_padrao <= 20.0:
+    # --- 🔥 DEGRADAÇÃO ADAPTATIVA INTELIGENTE ATIVADA SEM BLOQUEIO INJUSTO ---
+    if (winrate_padrao >= 55.0 and winrate_recente_padrao <= 15.0 and adaptive_score < 60):
         return "⚠️ DEGRADAÇÃO ACELERADA", 0
 
     peso_adaptive = 0.50
@@ -222,8 +218,6 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
     
     if expansion_score >= 80 and adaptive_score >= 72 and tx_roxa_quente_ctx >= 52: return "🌸 ROSA ELITE", int(score_final)
     if adaptive_score >= 62 and radar_score >= 48 and tx_roxa_quente_ctx >= 44: return "🟢 CHANCE ELITE", int(score_final)
-    
-    # --- 🔥 GARGALO MODIFICADO NO LABORATÓRIO: ZONEAMENTO ADAPTATIVO EM 42 ---
     if adaptive_score >= 42: return "🟡 OBSERVANDO", int(score_final)
 
     return "🔴 AGUARDAR", int(score_final)
