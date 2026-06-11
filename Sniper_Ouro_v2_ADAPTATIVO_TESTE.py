@@ -7,11 +7,16 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import brain_laboratorio as brain
 
-# --- 🔵 CONEXÃO COM O MOTOR DO AUTOMATIC TRACKER QUANT ---
+# --- 🔵 CONEXÃO COM OS MOTORES QUANT ---
 try:
     import auto_tracker as tracker
 except Exception as e:
     st.error(f"Erro ao importar auto_tracker.py: {e}")
+
+try:
+    import tipminer
+except Exception as e:
+    st.error(f"Erro ao importar tipminer.py: {e}")
 
 st.set_page_config(page_title="Sniper Ouro Ecossistema IA (TESTE)", page_icon="🎯", layout="centered")
 
@@ -305,15 +310,19 @@ st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
 if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
-    # --- 🔥 PONTO 2 AJUSTADO: AUDITORIA DIRETIVA DE ATUALIZAÇÃO ---
+    # --- 🔥 ETAPA C: ATUALIZAÇÃO DO TRACKER COM PIPELINE COMPLETO TIPMINER ---
     try:
         tracker.atualizar_resultado(
             vela_final=vela,
             rodada_atual=len(st.session_state.historico) + 1
         )
         st.success("🔥 ATUALIZAR_RESULTADO FOI CHAMADO")
+        
+        # Dispara a mineração de dados logo após atualizar o desfecho da rodada
+        tipminer.minerar_insights()
+        
     except Exception as e:
-        st.error(f"🔴 ERRO UPDATE TRACKER: {e}")
+        st.error(f"🔴 ERRO UPDATE TRACKER / TIPMINER: {e}")
 
     sinal_emitido_anterior = st.session_state.sinal_pendente_julgamento
     contexto_anterior = st.session_state.contexto_pendente_julgamento
@@ -417,8 +426,8 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         e_futuro = brain.detectar_expansao(st.session_state.historico)
         oco_f, win_p_f, win_r_f = analisar_banco_avancado(p_futuro)
         
-        text_50 = st.session_state.historico[-50:] if len(st.session_state.historico) >= 50 else st.session_state.historico
-        tx_roxa_quente_ctx_f = (sum(1 for x in text_50 if x >= 2) / len(text_50)) * 100 if len(text_50) > 0 else 0
+        ultimas50_f = st.session_state.historico[-50:] if len(st.session_state.historico) >= 50 else st.session_state.historico
+        tx_roxa_quente_ctx_f = (sum(1 for x in ultimas50_f if x >= 2) / len(ultimas50_f)) * 100 if len(ultimas50_f) > 0 else 0
         
         tx_roxa_f = 0.0
         if p_futuro in banco_global:
@@ -449,7 +458,6 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             "p_ef": aud_dict_f.get("penalidade_eficiencia",0), "p_fa": aud_dict_f.get("penalidade_fase",0)
         }
         
-        # --- 🔥 PONTO 1 AJUSTADO: AUDITORIA DIRETIVA DE REGISTRO ---
         try:
             tracker.registrar_sinal(
                 tipo=sinal_previsto,
@@ -579,7 +587,7 @@ except Exception as e:
 
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 
-st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍDOS)")
+st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍADOS)")
 st.write(f"📊 **Adaptive Score:** `{adaptive_score}`")
 st.write(f"⚡ **Radar Score:** `{radar_score}`")
 st.write(f"🌸 **Expansion Score:** `{expansion_score}`")
