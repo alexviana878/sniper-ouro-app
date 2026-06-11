@@ -1,7 +1,7 @@
 # auto_tracker.py
 # ====================================================================
 # SCRIPT DE RASTREAMENTO AUTOMÁTICO E AUDITORIA DE SINAIS (SQLITE)
-# VERSÃO: 1.7.0 - RELATÓRIO COMPLETO COM MÉTRICAS DE SINAIS PENDENTES
+# VERSÃO: 1.8.1 - INSIGHTS TIPMINER COM CONSTRAINT UNIQUE IMPLANTADA
 # ====================================================================
 
 import sqlite3
@@ -9,18 +9,17 @@ import os
 from datetime import datetime
 
 # --- CONFIGURAÇÃO MASTER DO LABORATÓRIO ---
-# Janela máxima configurável para evitar matar sinais que maturam mais tarde
 JANELA_MAXIMA = 5  
 
 # Definição do caminho do banco de dados local na mesma pasta do script
 DB_NAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tracker.db")
 
 def inicializar_banco():
-    """Cria o banco de dados e a tabela de sinais, aplicando migrações de colunas na risca."""
+    """Cria o banco de dados e as tabelas de sinais e insights, aplicando migrações na risca."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    # Criação da tabela com suporte total às melhorias do laboratório
+    # Criação da tabela de sinais
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS sinais (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,6 +38,21 @@ def inicializar_banco():
         consenso REAL DEFAULT 0.0,
         resultado_categoria TEXT DEFAULT NULL,
         fase_macro TEXT DEFAULT 'NEUTRA'
+    )
+    """)
+    
+    # --- 🛡️ ETAPA 1 ROBUSTA: TABELA INSIGHTS TIPMINER COM CONSTRAINT UNIQUE ---
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS insights_tipminer (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        contexto TEXT UNIQUE,
+        total_amostras INTEGER,
+        wins INTEGER,
+        losses INTEGER,
+        winrate REAL,
+        consenso_medio REAL,
+        delay_medio REAL,
+        ultima_atualizacao TEXT
     )
     """)
     
@@ -61,10 +75,7 @@ def inicializar_banco():
     conn.close()
 
 def registrar_sinal(tipo, adaptive_score, radar_score, expansion_score, tx_roxa_quente, padrao, rodada, consenso, fase_macro):
-    """
-    Registra um sinal emitido pelo cérebro armazenando as métricas e a fase macro do mercado.
-    Aceita: ROSA ELITE, CHANCE ELITE, PRÉ ELITE e OBSERVANDO.
-    """
+    """Registra um sinal emitido pelo cérebro armazenando as métricas e a fase macro do mercado."""
     inicializar_banco()
     
     sinais_validos = [
@@ -96,10 +107,7 @@ def registrar_sinal(tipo, adaptive_score, radar_score, expansion_score, tx_roxa_
         conn.close()
 
 def atualizar_resultado(vela_final, rodada_atual):
-    """
-    Varre todos os sinais PENDENTES no banco de dados de forma simultânea.
-    Aplica alvos matemáticos independentes e respeita a JANELA_MAXIMA de maturação configurável.
-    """
+    """Varre todos os sinais PENDENTES no banco de dados de forma simultânea."""
     inicializar_banco()
     
     conn = sqlite3.connect(DB_NAME)
@@ -118,11 +126,9 @@ def atualizar_resultado(vela_final, rodada_atual):
         sinal_id, tipo_sinal, rodada_origem = row
         delay_calculado = rodada_atual - rodada_origem
         
-        # Definição de alvo mínimo de sobrevivência do sinal
         alvo_minimo = 10.0 if "ROSA" in tipo_sinal else 2.0
         deu_green = vela_final >= alvo_minimo
         
-        # Lógica de Mapeamento e Categorização da força da vela obtida
         if vela_final >= 10.0:
             categoria_vela = "GREEN_ROSA"
         elif vela_final >= 5.0:
@@ -133,14 +139,12 @@ def atualizar_resultado(vela_final, rodada_atual):
             categoria_vela = "LOSS"
             
         if deu_green:
-            # Sinal bateu o alvo esperado dentro do prazo de tolerância!
             cursor.execute("""
             UPDATE sinais 
             SET status = 'WIN', resultado = ?, delay_rodadas = ?, timestamp_resultado = ?, resultado_categoria = ? 
             WHERE id = ?
             """, (vela_final, delay_calculado, timestamp_fechamento, categoria_vela, sinal_id))
         else:
-            # Se não bateu o alvo mínimo e estourou a janela máxima configurável, decreta LOSS
             if delay_calculado >= JANELA_MAXIMA:
                 cursor.execute("""
                 UPDATE sinais 
@@ -148,7 +152,6 @@ def atualizar_resultado(vela_final, rodada_atual):
                 WHERE id = ?
                 """, (vela_final, delay_calculado, timestamp_fechamento, sinal_id))
             else:
-                # O sinal mantém status PENDENTE para colher o desfecho nas próximas velas da janela
                 pass
                 
     conn.commit()
@@ -170,21 +173,17 @@ def obter_metricas_painel():
         cursor.execute("SELECT COUNT(*) FROM sinais WHERE tipo = ? AND status = 'LOSS'", (t,))
         losses = cursor.fetchone()[0]
         
-        # Puxa o volume bruto histórico total absoluto emitido para este sinal
         cursor.execute("SELECT COUNT(*) FROM sinais WHERE tipo = ?", (t,))
         total_registrado = cursor.fetchone()[0]
         
-        # Média de delays apenas das operações vitoriosas
         cursor.execute("SELECT AVG(delay_rodadas) FROM sinais WHERE tipo = ? AND status = 'WIN'", (t,))
         avg_delay = cursor.fetchone()[0]
         avg_delay = round(avg_delay, 1) if avg_delay is not None else 0.0
         
-        # Extração da média do Consenso Master real enviado
         cursor.execute("SELECT AVG(consenso) FROM sinais WHERE tipo = ?", (t,))
         avg_consenso = cursor.fetchone()[0]
         avg_consenso = round(avg_consenso, 1) if avg_consenso is not None else 0.0
         
-        # Extração de estatísticas de categorias de velas
         cursor.execute("SELECT COUNT(*) FROM sinais WHERE tipo = ? AND resultado_categoria = 'GREEN_2X'", (t,))
         g2x = cursor.fetchone()[0]
         
@@ -197,7 +196,6 @@ def obter_metricas_painel():
         total_resolvidos = wins + losses
         winrate = round((wins / total_resolvidos) * 100, 1) if total_resolvidos > 0 else 0.0
         
-        # 🔥 ADICIONADO EXPLICITAMENTE O DICIONÁRIO COMPLETO COM O CAMPO "PENDENTES" SOLICITADO
         metricas[t] = {
             "wins": wins,
             "losses": losses,
@@ -215,5 +213,4 @@ def obter_metricas_painel():
     conn.close()
     return metricas
 
-# Inicialização automática de segurança estrutural
 inicializar_banco()
