@@ -305,13 +305,13 @@ st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
 if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
-    # --- 🔥 PONTO 2 AJUSTADO: FEEDBACK VERDE PARA ATUALIZAÇÃO DE RESULTADOS NO SQLITE ---
+    # --- 🔥 PONTO 2 AJUSTADO: AUDITORIA DIRETIVA DE ATUALIZAÇÃO ---
     try:
         tracker.atualizar_resultado(
             vela_final=vela,
             rodada_atual=len(st.session_state.historico) + 1
         )
-        st.success("🟢 TRACKER ATUALIZOU RESULTADO")
+        st.success("🔥 ATUALIZAR_RESULTADO FOI CHAMADO")
     except Exception as e:
         st.error(f"🔴 ERRO UPDATE TRACKER: {e}")
 
@@ -417,8 +417,8 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         e_futuro = brain.detectar_expansao(st.session_state.historico)
         oco_f, win_p_f, win_r_f = analisar_banco_avancado(p_futuro)
         
-        ultimas50_f = st.session_state.historico[-50:] if len(st.session_state.historico) >= 50 else st.session_state.historico
-        tx_roxa_quente_ctx_f = (sum(1 for x in ultimas50_f if x >= 2) / len(ultimas50_f)) * 100 if len(ultimas50_f) > 0 else 0
+        text_50 = st.session_state.historico[-50:] if len(st.session_state.historico) >= 50 else st.session_state.historico
+        tx_roxa_quente_ctx_f = (sum(1 for x in text_50 if x >= 2) / len(text_50)) * 100 if len(text_50) > 0 else 0
         
         tx_roxa_f = 0.0
         if p_futuro in banco_global:
@@ -449,7 +449,7 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             "p_ef": aud_dict_f.get("penalidade_eficiencia",0), "p_fa": aud_dict_f.get("penalidade_fase",0)
         }
         
-        # --- 🔥 PONTO 1 AJUSTADO: FEEDBACK VERDE PARA REGISTRO DE NOVOS SINAIS NO SQLITE ---
+        # --- 🔥 PONTO 1 AJUSTADO: AUDITORIA DIRETIVA DE REGISTRO ---
         try:
             tracker.registrar_sinal(
                 tipo=sinal_previsto,
@@ -462,7 +462,7 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
                 consenso=score_previsto,
                 fase_macro=f_futuro
             )
-            st.success("🟢 TRACKER REGISTROU O SINAL")
+            st.success("🔥 REGISTRAR_SINAL FOI CHAMADO")
         except Exception as e:
             st.error(f"🔴 ERRO TRACKER: {e}")
     
@@ -548,7 +548,7 @@ if total_rodadas_auditadas > 0:
     with st.expander("📥 VER BANCO DATA LOG COMPLETO", expanded=False):
         st.json(st.session_state.log_auditoria_completo[-20:])
 
-# --- 📊 PAINEL DE METRICAS AVANÇADAS EM REAL TIME DO TRACKER SQLITE ---
+# --- 📊 NOVO PAINEL DE METRICAS AVANÇADAS EM REAL TIME DO TRACKER SQLITE ---
 try:
     dados_sqlite = tracker.obter_metricas_painel()
     st.markdown('<div class="audit-card"><h3>📊 PAINEL DE MÉTRICAS REAIS (TRACKER SQLITE)</h3></div>', unsafe_allow_html=True)
