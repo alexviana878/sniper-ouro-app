@@ -305,13 +305,15 @@ st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
 if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
+    # --- 🔥 PONTO 2 AJUSTADO: FEEDBACK VERDE PARA ATUALIZAÇÃO DE RESULTADOS NO SQLITE ---
     try:
         tracker.atualizar_resultado(
             vela_final=vela,
             rodada_atual=len(st.session_state.historico) + 1
         )
+        st.success("🟢 TRACKER ATUALIZOU RESULTADO")
     except Exception as e:
-        print("ERRO UPDATE TRACKER:", e)
+        st.error(f"🔴 ERRO UPDATE TRACKER: {e}")
 
     sinal_emitido_anterior = st.session_state.sinal_pendente_julgamento
     contexto_anterior = st.session_state.contexto_pendente_julgamento
@@ -418,7 +420,6 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         ultimas50_f = st.session_state.historico[-50:] if len(st.session_state.historico) >= 50 else st.session_state.historico
         tx_roxa_quente_ctx_f = (sum(1 for x in ultimas50_f if x >= 2) / len(ultimas50_f)) * 100 if len(ultimas50_f) > 0 else 0
         
-        # --- 🔥 CORE RE-CALIBRATION: HIGIENIZAÇÃO DO DATA LEAKAGE PREDITIVO (TX ROXA FUTURA) ---
         tx_roxa_f = 0.0
         if p_futuro in banco_global:
             tx_roxa_f = (banco_global[p_futuro]["roxa"] / banco_global[p_futuro]["total"]) * 100
@@ -448,6 +449,7 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             "p_ef": aud_dict_f.get("penalidade_eficiencia",0), "p_fa": aud_dict_f.get("penalidade_fase",0)
         }
         
+        # --- 🔥 PONTO 1 AJUSTADO: FEEDBACK VERDE PARA REGISTRO DE NOVOS SINAIS NO SQLITE ---
         try:
             tracker.registrar_sinal(
                 tipo=sinal_previsto,
@@ -460,8 +462,9 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
                 consenso=score_previsto,
                 fase_macro=f_futuro
             )
+            st.success("🟢 TRACKER REGISTROU O SINAL")
         except Exception as e:
-            print("ERRO TRACKER:", e)
+            st.error(f"🔴 ERRO TRACKER: {e}")
     
     salvar_memoria()
     st.rerun()
@@ -545,7 +548,7 @@ if total_rodadas_auditadas > 0:
     with st.expander("📥 VER BANCO DATA LOG COMPLETO", expanded=False):
         st.json(st.session_state.log_auditoria_completo[-20:])
 
-# --- 📊 NOVO PAINEL DE METRICAS AVANÇADAS EM REAL TIME DO TRACKER SQLITE ---
+# --- 📊 PAINEL DE METRICAS AVANÇADAS EM REAL TIME DO TRACKER SQLITE ---
 try:
     dados_sqlite = tracker.obter_metricas_painel()
     st.markdown('<div class="audit-card"><h3>📊 PAINEL DE MÉTRICAS REAIS (TRACKER SQLITE)</h3></div>', unsafe_allow_html=True)
