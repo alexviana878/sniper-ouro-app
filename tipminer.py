@@ -1,7 +1,7 @@
 # tipminer.py
 # ====================================================================
 # MOTOR DE EXTRAÇÃO DE INSIGHTS E APRENDIZADO AUTOMÁTICO (TIPMINER V1)
-# VERSÃO: 1.2.0 - UPSERT NATIVO VIA ON CONFLICT DO SQLITE (BLINDADO)
+# VERSÃO: 1.2.5 - UPSERT NATIVO + PARSER EM DICIONÁRIO DE ALTA PRODUTIVIDADE
 # ====================================================================
 
 import sqlite3
@@ -86,3 +86,50 @@ def minerar_insights():
 
     conn.commit()
     conn.close()
+
+
+def obter_insights():
+    """
+    Busca os dados gerados na tabela insights_tipminer, trata as tuplas brutas
+    do SQLite e converte em um dicionário estruturado legível para os expanders.
+    """
+    dados = {}
+    if not os.path.exists(DB_NAME):
+        return dados
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT
+                contexto,
+                total_amostras,
+                wins,
+                losses,
+                winrate,
+                consenso_medio,
+                delay_medio,
+                ultima_atualizacao
+            FROM insights_tipminer
+            ORDER BY winrate DESC
+        """)
+        
+        resultados = cursor.fetchall()
+        
+        for row in resultados:
+            contexto = row[0]
+            dados[contexto] = {
+                "total": row[1],
+                "wins": row[2],
+                "losses": row[3],
+                "winrate": row[4],
+                "consenso_medio": row[5],
+                "delay_medio": row[6],
+                "ultima_atualizacao": row[7]
+            }
+    except Exception as e:
+        print("ERRO INTERNO TIPMINER EXTRACTION:", e)
+
+    conn.close()
+    return dados
