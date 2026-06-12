@@ -1,7 +1,7 @@
 # auto_tracker.py
 # ====================================================================
 # SCRIPT DE RASTREAMENTO AUTOMÁTICO E AUDITORIA DE SINAIS (SQLITE)
-# VERSÃO: 1.8.1 - INSIGHTS TIPMINER COM CONSTRAINT UNIQUE IMPLANTADA
+# VERSÃO: 1.9.0 - INSIGHTS TIPMINER + INDEXADORES QUANT MASTER INSTALADOS
 # ====================================================================
 
 import sqlite3
@@ -15,7 +15,7 @@ JANELA_MAXIMA = 5
 DB_NAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tracker.db")
 
 def inicializar_banco():
-    """Cria o banco de dados e as tabelas de sinais e insights, aplicando migrações na risca."""
+    """Cria o banco de dados, as tabelas e os índices de alta performance para milhares de registros."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
@@ -55,6 +55,10 @@ def inicializar_banco():
         ultima_atualizacao TEXT
     )
     """)
+    
+    # --- ⚡ ACELERAÇÃO FUTURA: CRIAÇÃO DE ÍNDICES QUANT MASTER (EVITA LENTIDÃO EM ALTA VOLUMETRIA) ---
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sinais_status ON sinais(status);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sinais_consenso ON sinais(consenso);")
     
     # --- 🛡️ ENGINE MASTER DE MIGRAÇÃO AUTOMÁTICA DE COLUNAS ---
     cursor.execute("PRAGMA table_info(sinais)")
