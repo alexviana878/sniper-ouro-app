@@ -310,7 +310,6 @@ st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
 if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
-    # --- 🔥 ETAPA C REVISADA: CIRCUITO FECHADO DE ATUALIZAÇÃO TRACKER + MINERAÇÃO TIPMINER ---
     try:
         tracker.atualizar_resultado(
             vela_final=vela,
@@ -318,7 +317,6 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         )
         st.success("🔥 ATUALIZAR_RESULTADO FOI CHAMADO")
         
-        # Dispara o recálculo do banco de inteligência na risca
         tipminer.minerar_insights()
         st.success("🔥 TIPMINER MINEROU NOVOS INSIGHTS DA RODADA")
         
@@ -557,7 +555,7 @@ if total_rodadas_auditadas > 0:
     with st.expander("📥 VER BANCO DATA LOG COMPLETO", expanded=False):
         st.json(st.session_state.log_auditoria_completo[-20:])
 
-# --- 📊 NOVO PAINEL DE METRICAS AVANÇADAS EM REAL TIME DO TRACKER SQLITE ---
+# --- 📊 PAINEL DE METRICAS AVANÇADAS EM REAL TIME DO TRACKER SQLITE ---
 try:
     dados_sqlite = tracker.obter_metricas_painel()
     st.markdown('<div class="audit-card"><h3>📊 PAINEL DE MÉTRICAS REAIS (TRACKER SQLITE)</h3></div>', unsafe_allow_html=True)
@@ -585,6 +583,33 @@ try:
             col_cat3.metric("Explodiu Rosa ≥ 10x", f"{info['vol_rosa']} vezes")
 except Exception as e:
     print("ERRO EXIBIÇÃO PAINEL SQLITE:", e)
+
+# --- 📚 NOVO PAINEL: INTELIGÊNCIA APRENDIDA PELO TIPMINER V1 ---
+try:
+    # --- 👑 CORREÇÃO ESTRITA: Troca do tracker para chamada direta do módulo tipminer ---
+    insights_minerados = tipminer.obter_insights()
+    
+    if insights_minerados:
+        st.markdown('<div class="audit-card"><h3>📚 INTELIGÊNCIA APRENDIDA PELO TIPMINER</h3></div>', unsafe_allow_html=True)
+        
+        for faixa_nome, dados_f in insights_minerados.items():
+            num_faixa = faixa_nome.replace("CONSENSO_", "")
+            label_faixa = f"🎯 MATRIZ DE EDGE: Sinais com Consenso {num_faixa}% a {int(num_faixa)+9}%"
+            
+            with st.expander(label_faixa, expanded=False):
+                c_tm1, c_tm2, c_tm3, c_tm4 = st.columns(4)
+                with c_tm1:
+                    st.metric("Amostras Coletadas", dados_f["total"])
+                with c_tm2:
+                    st.metric("Winrate Real da Faixa", f"{dados_f['winrate']}%")
+                with c_tm3:
+                    st.metric("Placar Real (W/L)", f"{dados_f['wins']}W - {dados_f['losses']}L")
+                with c_tm4:
+                    st.metric("Atraso Médio (Delay)", f"{dados_f['delay_medio']} rds")
+                    
+                st.caption(f"🧬 *Média exata de consenso nesta gaveta:* {dados_f['consenso_medio']}% | *Última atualização:* {dados_f['ultima_atualizacao']}")
+except Exception as e:
+    st.error(f"🔴 ERRO VISUAL TIPMINER PANEL: {e}")
 
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 
