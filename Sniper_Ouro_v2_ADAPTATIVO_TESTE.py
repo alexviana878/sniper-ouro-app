@@ -314,26 +314,23 @@ st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
-# --- 🔄 SEÇÃO DO BOTÃO DE CAPTURA COM DIAGNÓSTICO INTEGRADO NA TELA ---
+# --- 🔄 SEÇÃO DO BOTÃO DE CAPTURA COM DIAGNÓSTICO INTEGRADO NA TELA (PASSO A / A.1 / B) ---
 if st.button("🔄 CAPTURAR TIPMINER"):
     st.info("Iniciando captura...")
     try:
-        # --- 🛡️ MARCADORES DE DIAGNÓSTICO ESTREITO INJETADOS ---
         st.write("PASSO A")
         
-        rodadas_capturadas = capturar_rodadas()
+        import coletor_tipminer
+        
+        st.write("PASSO A.1")
+        
+        rodadas_capturadas = coletor_tipminer.capturar_rodadas()
         
         st.write("PASSO B")
         st.write("TOTAL RECEBIDO:", len(rodadas_capturadas))
         
-        if len(rodadas_capturadas) > 0:
-            st.session_state.historico = rodadas_capturadas
-            st.success(f"✅ {len(rodadas_capturadas)} rodadas loaded e injetadas automaticamente")
-            st.rerun()
-        else:
-            st.warning("⚠️ Nenhuma rodada encontrada")
     except Exception as erro:
-        st.error(f"ERRO DETALHADO: {erro}")
+        st.error(f"ERRO: {erro}")
 
 if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
     try:
@@ -606,7 +603,7 @@ try:
                 
             st.markdown("##### 🎯 Escalonamento de Alvos Atingidos")
             col_cat1, col_cat2, col_cat3 = st.columns(3)
-            col_cat1.metric("Bateu ≥ 2.0x", f"{info['vol_2x']} vezes")
+            col_cat1.metric("Bateu ≥ 2.0x", f"{info['vol_2x']}vezes")
             col_cat2.metric("Esticou ≥ 5.0x", f"{info['vol_5x']} vezes")
             col_cat3.metric("Explodiu Rosa ≥ 10x", f"{info['vol_rosa']} vezes")
 except Exception as e:
@@ -640,7 +637,7 @@ except Exception as e:
 
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 
-st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍADOS)")
+st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍDOS)")
 st.write(f"📊 **Adaptive Score:** `{adaptive_score}`")
 st.write(f"⚡ **Radar Score:** `{radar_score}`")
 st.write(f"🌸 **Expansion Score:** `{expansion_score}`")
