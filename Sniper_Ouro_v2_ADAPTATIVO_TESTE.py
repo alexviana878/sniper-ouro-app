@@ -314,18 +314,21 @@ st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
-# --- 🔄 SEÇÃO DO BOTÃO DE CAPTURA AUTOMÁTICA VIA API TIPMINER ---
+# --- 🔄 SEÇÃO DO BOTÃO DE CAPTURA COM DIAGNÓSTICO INTEGRADO NA TELA ---
 if st.button("🔄 CAPTURAR TIPMINER"):
+    st.info("Iniciando captura...")
     try:
         rodadas_capturadas = capturar_rodadas()
+        st.write("TOTAL RECEBIDO:", len(rodadas_capturadas))
+        
         if len(rodadas_capturadas) > 0:
             st.session_state.historico = rodadas_capturadas
-            st.success(f"✅ {len(rodadas_capturadas)} rodadas carregadas automaticamente")
+            st.success(f"✅ {len(rodadas_capturadas)} rodadas loaded e injetadas automaticamente")
             st.rerun()
         else:
             st.warning("⚠️ Nenhuma rodada encontrada")
     except Exception as erro:
-        st.error(f"Erro na captura: {erro}")
+        st.error(f"ERRO DETALHADO: {erro}")
 
 if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
     try:
@@ -612,7 +615,6 @@ try:
         st.markdown('<div class="audit-card"><h3>📚 INTELIGÊNCIA APRENDIDA PELO TIPMINER</h3></div>', unsafe_allow_html=True)
         
         for faixa_nome, dados_f in insights_minerados.items():
-            # Suporta tanto o padrão antigo quanto os novos rótulos detalhados do tipminer (Ex: PREMIUM_70)
             label_limpo = faixa_nome.replace("_", " ")
             label_faixa = f"🎯 MATRIZ DE EDGE: Sinais {label_limpo}%"
             
