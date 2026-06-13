@@ -1,6 +1,6 @@
 # brain_laboratorio.py
 # ====================================================================
-# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.7.2
+# ENGINE QUANTITATIVA MODULAR - MASTER PREMIUM v10.7.3
 # STATUS: LABORATÓRIO AVANÇADO / ADAPTATIVE RADAR & EXPANSION TRIGGER
 # ====================================================================
 
@@ -108,12 +108,12 @@ def detectar_aceleracao(historico):
     if len(historico) < 8:
         return {"roxa": False, "rosa": False, "densidade": False}
     ultimas8 = historico[-8:]
-    ultimas4 = historico[-4:]
+    text4 = historico[-4:]
     media8 = sum(ultimas8) / 8
-    media4 = sum(ultimas4) / 4
+    media4 = sum(text4) / 4
     roxas8 = len([v for v in ultimas8 if v >= 2])
-    roxas4 = len([v for v in ultimas4 if v >= 2])
-    rosas4 = len([v for v in ultimas4 if v >= 10])
+    roxas4 = len([v for v in text4 if v >= 2])
+    rosas4 = len([v for v in text4 if v >= 10])
     aceleracao_roxa = (roxas4 >= 2 and roxas8 >= 3 and media4 > media8)
     aceleracao_rosa = (rosas4 >= 1 and media4 >= 4)
     aceleracao_densidade = (media8 <= 1.7 and media4 >= 2.4)
@@ -164,8 +164,8 @@ def calcular_score_adaptive(historico, taxa_roxa, tx_roxa_quente_ctx, ocorrencia
     elif ocorrencias >= 20 and winrate_padrao >= 50.0: score_base += 15
     elif ocorrencias >= 10 and winrate_padrao >= 45.0: score_base += 10
 
-    ultimas15 = historico[-15:] if len(historico) >= 15 else historico
-    densidade_roxa = sum(1 for x in ultimas15 if x >= 2)
+    ultimas15_ctx = historico[-15:] if len(historico) >= 15 else historico
+    densidade_roxa = sum(1 for x in ultimas15_ctx if x >= 2)
     if densidade_roxa >= 9: score_base += 25
     elif densidade_roxa <= 4: score_base -= 20
 
@@ -216,16 +216,36 @@ def calcular_consenso(adaptive_score, radar_score, expansion_score, fase_macro, 
 
     if tx_roxa_quente_ctx < 35.0 and radar_score < 35: return "⚠️ PRESSÃO FRACA", int(score_final)
     
-    if expansion_score >= 80 and adaptive_score >= 72 and tx_roxa_quente_ctx >= 52: return "🌸 ROSA ELITE", int(score_final)
-    
-    # --- 🔥 ETAPA 2: APERTO DE ALTA FIDELIDADE DO FILTRO CHANCE ELITE ---
-    if (adaptive_score >= 75 and radar_score >= 60 and tx_roxa_quente_ctx >= 50 and expansion_score >= 50): 
+    # --- 🌸 EM PRIMEIRO LUGAR: ROSA ELITE ---
+    if expansion_score >= 80 and adaptive_score >= 72 and tx_roxa_quente_ctx >= 52:
+        return "🌸 ROSA ELITE", int(score_final)
+
+    # --- 🟢 EM SEGUNDO LUGAR: CHANCE ELITE ---
+    if (
+        adaptive_score >= 75
+        and radar_score >= 60
+        and tx_roxa_quente_ctx >= 50
+        and expansion_score >= 50
+    ):
         return "🟢 CHANCE ELITE", int(score_final)
 
-    # --- 🔥 ETAPA 1: ADICIONADO ZONA DE FILTRAGEM INTERMEDIÁRIA PRÉ ELITE ---
-    if (adaptive_score >= 60 and radar_score >= 40):
+    # --- 💎 EM TERCEIRO LUGAR: ENTRADA PREMIUM (FILTRO DE CAPTURA INTELIGENTE) ---
+    if (
+        adaptive_score >= 68
+        and radar_score >= 55
+        and expansion_score >= 50
+        and tx_roxa_quente_ctx >= 45
+    ):
+        return "💎 PREMIUM", int(score_final)
+
+    # --- 🟠 EM QUARTO LUGAR: PRÉ ELITE ---
+    if (
+        adaptive_score >= 60
+        and radar_score >= 40
+    ):
         return "🟠 PRÉ ELITE", int(score_final)
         
-    if adaptive_score >= 42: return "🟡 OBSERVANDO", int(score_final)
+    if adaptive_score >= 42: 
+        return "🟡 OBSERVANDO", int(score_final)
 
     return "🔴 AGUARDAR", int(score_final)
