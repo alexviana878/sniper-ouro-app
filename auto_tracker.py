@@ -1,7 +1,7 @@
 # auto_tracker.py
 # ====================================================================
 # SCRIPT DE RASTREAMENTO AUTOMÁTICO E AUDITORIA DE SINAIS (SQLITE)
-# VERSÃO: 1.9.0 - INSIGHTS TIPMINER + INDEXADORES QUANT MASTER INSTALADOS
+# VERSÃO: 1.9.5 - INTEGRAÇÃO INTEGRAL DE SINAL COGNITIVO PREMIUM
 # ====================================================================
 
 import sqlite3
@@ -56,7 +56,7 @@ def inicializar_banco():
     )
     """)
     
-    # --- ⚡ ACELERAÇÃO FUTURA: CRIAÇÃO DE ÍNDICES QUANT MASTER (EVITA LENTIDÃO EM ALTA VOLUMETRIA) ---
+    # --- ⚡ ACELERAÇÃO FUTURA: CRIAÇÃO DE ÍNDICES QUANT MASTER ---
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_sinais_status ON sinais(status);")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_sinais_consenso ON sinais(consenso);")
     
@@ -82,21 +82,23 @@ def registrar_sinal(tipo, adaptive_score, radar_score, expansion_score, tx_roxa_
     """Registra um sinal emitido pelo cérebro armazenando as métricas e a fase macro do mercado."""
     inicializar_banco()
     
+    # --- 🛡️ HIERARQUIA ATUALIZADA COM ENTRADA PREMIUM ---
     sinais_validos = [
-        "🟠 PRÉ ELITE", "🟢 CHANCE ELITE", "🌸 ROSA ELITE", "🟡 OBSERVANDO",
-        "PRÉ ELITE", "CHANCE ELITE", "ROSA ELITE", "OBSERVANDO",
-        "PRE_ELITE", "CHANCE_ELITE", "ROSA_ELITE"
+        "🟠 PRÉ ELITE", "🟢 CHANCE ELITE", "🌸 ROSA ELITE", "💎 PREMIUM", "🟡 OBSERVANDO",
+        "PRÉ ELITE", "CHANCE ELITE", "ROSA ELITE", "PREMIUM", "OBSERVANDO",
+        "PRE_ELITE", "CHANCE_ELITE", "ROSA_ELITE", "PREMIUM"
     ]
     
     tipo_limpo = (
         tipo.replace("🟠 ", "")
             .replace("🟢 ", "")
             .replace("🌸 ", "")
+            .replace("💎 ", "")
             .replace("🟡 ", "")
             .strip()
     )
     
-    if tipo in sinais_validos or tipo_limpo in ["PRÉ ELITE", "CHANCE ELITE", "ROSA ELITE", "OBSERVANDO"]:
+    if tipo in sinais_validos or tipo_limpo in ["PRÉ ELITE", "CHANCE ELITE", "ROSA ELITE", "PREMIUM", "OBSERVANDO"]:
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
         
@@ -167,7 +169,8 @@ def obter_metricas_painel():
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
-    tipos = ["CHANCE ELITE", "ROSA ELITE", "PRÉ ELITE", "OBSERVANDO"]
+    # --- 📊 FUNIL ATUALIZADO PARA O PAINEL GERAL ---
+    tipos = ["ROSA ELITE", "CHANCE ELITE", "PREMIUM", "PRÉ ELITE", "OBSERVANDO"]
     metricas = {}
     
     for t in tipos:
