@@ -148,7 +148,7 @@ if "dados_carregados" not in st.session_state:
     st.session_state.auditoria_freios = dados.get("auditoria_freios", {"exaustao": 0, "degradacao": 0, "eficiencia": 0, "fase_macro": 0})
     st.session_state.auditoria_sinais = dados.get("auditoria_sinais", {"CHANCE ELITE": 0, "ROSA ELITE": 0, "PREMIUM": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0})
     st.session_state.auditoria_assertividade = dados.get("auditoria_assertividade", {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "PREMIUM": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}})
-    st.session_state.log_auditoria_completo = dados.get("log_auditoria_completo", [])
+    st.session_state.log_auditoria_completo = []
     st.session_state.freio_dominante = dados.get("freio_dominante", {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0})
     
     st.session_state.sinal_pendente_julgamento = "AGUARDAR"
@@ -318,7 +318,12 @@ vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, f
 if st.button("🔄 CAPTURAR TIPMINER"):
     st.info("Iniciando captura...")
     try:
+        # --- 🛡️ MARCADORES DE DIAGNÓSTICO ESTREITO INJETADOS ---
+        st.write("PASSO A")
+        
         rodadas_capturadas = capturar_rodadas()
+        
+        st.write("PASSO B")
         st.write("TOTAL RECEBIDO:", len(rodadas_capturadas))
         
         if len(rodadas_capturadas) > 0:
@@ -527,7 +532,7 @@ total_rodadas_auditadas = len(st.session_state.log_auditoria_completo)
 total_rodadas_historico = len(st.session_state.historico)
 
 st.markdown(f"📊 **Volume Total do Histórico Ativo:** `{total_rodadas_historico}` rodadas carregadas no ecossistema.")
-st.write(f"🧬 *Volume de Amostragem Auditada nesta Sessão:* **{total_rodadas_auditadas}** rodadas gravadas automaticamente.")
+st.write(f"🧬 *Volume de Amostragem Auditada nesta Sessão:* **{total_rodadas_auditadas}** rodadas gravadas automatically.")
 
 col_f1, col_f2 = st.columns(2)
 with col_f1:
@@ -635,7 +640,7 @@ except Exception as e:
 
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 
-st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍDOS)")
+st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍADOS)")
 st.write(f"📊 **Adaptive Score:** `{adaptive_score}`")
 st.write(f"⚡ **Radar Score:** `{radar_score}`")
 st.write(f"🌸 **Expansion Score:** `{expansion_score}`")
