@@ -1,7 +1,7 @@
 # tipminer.py
 # ====================================================================
 # MOTOR DE EXTRAÇÃO DE INSIGHTS E APRENDIZADO AUTOMÁTICO (TIPMINER V1)
-# VERSÃO: 1.2.5 - UPSERT NATIVO + PARSER EM DICIONÁRIO DE ALTA PRODUTIVIDADE
+# VERSÃO: 1.3.5 - ORDENAÇÃO POR RELEVÂNCIA ESTATÍSTICA (AMOSTRAGEM DESC)
 # ====================================================================
 
 import sqlite3
@@ -13,8 +13,8 @@ DB_NAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tracker.db")
 
 def minerar_insights():
     """
-    Analisa o histórico de sinais processados, agrupa por faixas de consenso puras
-    e utiliza Upsert (ON CONFLICT) para atualizar ou inserir na insights_tipminer.
+    Analisa o histórico de sinais processados, agrupa por Tipo de Sinal e faixas de 
+    consenso puras, utilizando Upsert para granularizar a matriz de assertividade.
     """
     if not os.path.exists(DB_NAME):
         return
@@ -25,6 +25,7 @@ def minerar_insights():
     # Query quant com o CAST para estabilização de gavetas de piso
     cursor.execute("""
     SELECT
+        tipo,
         CAST(consenso / 10 AS INTEGER) * 10 as faixa_consenso,
         COUNT(*),
         SUM(CASE WHEN status='WIN' THEN 1 ELSE 0 END),
@@ -33,13 +34,13 @@ def minerar_insights():
         AVG(consenso)
     FROM sinais
     WHERE status IN ('WIN','LOSS')
-    GROUP BY faixa_consenso
+    GROUP BY tipo, faixa_consenso
     """)
 
     resultados = cursor.fetchall()
 
     for row in resultados:
-        faixa, total, wins, losses, delay, consenso = row
+        tipo, faixa, total, wins, losses, delay, consenso = row
 
         if total == 0:
             continue
@@ -49,7 +50,19 @@ def minerar_insights():
         delay_medio = round(delay, 2) if delay is not None else 0.0
         consenso_medio = round(consenso, 2) if consenso is not None else 0.0
         
-        contexto_label = f"CONSENSO_{int(faixa)}"
+        # Engine de higienização de rótulos
+        tipo_limpo = (
+            str(tipo)
+            .replace(" ", "_")
+            .replace("🟠", "")
+            .replace("🟢", "")
+            .replace("🌸", "")
+            .replace("💎", "")
+            .replace("🟡", "")
+            .strip()
+        )
+
+        contexto_label = f"{tipo_limpo}_{int(faixa)}"
 
         # --- 🚀 QUERY UNIFICADA: UPSERT MASTER COM ON CONFLICT(contexto) ---
         cursor.execute("""
@@ -91,7 +104,7 @@ def minerar_insights():
 def obter_insights():
     """
     Busca os dados gerados na tabela insights_tipminer, trata as tuplas brutas
-    do SQLite e converte em um dicionário estruturado legível para os expanders.
+    e converte em dicionário ordenando por peso de amostragem e taxa de vitória.
     """
     dados = {}
     if not os.path.exists(DB_NAME):
@@ -101,6 +114,7 @@ def obter_insights():
     cursor = conn.cursor()
 
     try:
+        # --- 🛡️ ALTERAÇÃO CIRÚRGICA: ORDENAÇÃO POR AMOSTRAGEM E DEPOIS POR WINRATE ---
         cursor.execute("""
             SELECT
                 contexto,
@@ -112,7 +126,7 @@ def obter_insights():
                 delay_medio,
                 ultima_atualizacao
             FROM insights_tipminer
-            ORDER BY winrate DESC
+            ORDER BY total_amostras DESC, winrate DESC
         """)
         
         resultados = cursor.fetchall()
