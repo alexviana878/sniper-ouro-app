@@ -15,11 +15,16 @@ def capturar_rodadas():
             "User-Agent": "Mozilla/5.0"
         }
 
+        # --- 🔍 RASTREAMENTO INTERNO DE EXECUÇÃO ---
+        print("ANTES REQUEST")
+
         resposta = requests.get(
             URL,
             headers=headers,
             timeout=5
         )
+
+        print("DEPOIS REQUEST")
 
         # --- 📊 PRINTS DE DIAGNÓSTICO AVANÇADO ---
         print("STATUS:", resposta.status_code)
