@@ -7,7 +7,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import brain_laboratorio as brain
 
-# --- 🔵 CONEXÃO COM OS MOTORES QUANT ---
+# --- 🔵 CONEXÃO COM OS MOTORES QUANT E COLETOR ---
 try:
     import auto_tracker as tracker
 except Exception as e:
@@ -18,10 +18,15 @@ try:
 except Exception as e:
     st.error(f"Erro ao importar tipminer.py: {e}")
 
+try:
+    from coletor_tipminer import capturar_rodadas
+except Exception as e:
+    st.error(f"Erro ao importar coletor_tipminer.py: {e}")
+
 st.set_page_config(page_title="Sniper Ouro Ecossistema IA (TESTE)", page_icon="🎯", layout="centered")
 
 # --- PARAMETRIZAÇÃO E CONTROLE DE VERSÃO DE LABORATÓRIO ---
-VERSAO_CEREBRO = "10.7.2"  
+VERSAO_CEREBRO = "10.7.3"  
 
 SENHA_CORRETA = "AlexMestre2026"
 if "autenticado" not in st.session_state: st.session_state.autenticado = False
@@ -66,8 +71,8 @@ def carregar_memoria():
             with open(ARQUIVO_MEMORIA, "r") as f:
                 dados = json.load(f)
                 if "auditoria_freios" not in dados: dados["auditoria_freios"] = {"exaustao": 0, "degradacao": 0, "eficiencia": 0, "fase_macro": 0}
-                if "auditoria_sinais" not in dados: dados["auditoria_sinais"] = {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0}
-                if "auditoria_assertividade" not in dados: dados["auditoria_assertividade"] = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
+                if "auditoria_sinais" not in dados: dados["auditoria_sinais"] = {"CHANCE ELITE": 0, "ROSA ELITE": 0, "PREMIUM": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0}
+                if "auditoria_assertividade" not in dados: dados["auditoria_assertividade"] = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "PREMIUM": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
                 if "log_auditoria_completo" not in dados: dados["log_auditoria_completo"] = []
                 if "freio_dominante" not in dados: dados["freio_dominante"] = {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0}
                 return dados
@@ -80,8 +85,8 @@ def carregar_memoria():
         "padroes_db": {}, "max_drawdown_calc": 0.0, "bloco_validacao": "NENHUM",
         "score_medio": 0, "total_operacoes": 0,
         "auditoria_freios": {"exaustao": 0, "degradacao": 0, "eficiencia": 0, "fase_macro": 0},
-        "auditoria_sinais": {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0},
-        "auditoria_assertividade": {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}},
+        "auditoria_sinais": {"CHANCE ELITE": 0, "ROSA ELITE": 0, "PREMIUM": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0},
+        "auditoria_assertividade": {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "PREMIUM": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}},
         "log_auditoria_completo": [],
         "freio_dominante": {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0}
     }
@@ -141,8 +146,8 @@ if "dados_carregados" not in st.session_state:
     st.session_state.score_medio = dados.get("score_medio", 0)
     st.session_state.total_operacoes = dados.get("total_operacoes", 0)
     st.session_state.auditoria_freios = dados.get("auditoria_freios", {"exaustao": 0, "degradacao": 0, "eficiencia": 0, "fase_macro": 0})
-    st.session_state.auditoria_sinais = dados.get("auditoria_sinais", {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0})
-    st.session_state.auditoria_assertividade = dados.get("auditoria_assertividade", {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}})
+    st.session_state.auditoria_sinais = dados.get("auditoria_sinais", {"CHANCE ELITE": 0, "ROSA ELITE": 0, "PREMIUM": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0})
+    st.session_state.auditoria_assertividade = dados.get("auditoria_assertividade", {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "PREMIUM": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}})
     st.session_state.log_auditoria_completo = dados.get("log_auditoria_completo", [])
     st.session_state.freio_dominante = dados.get("freio_dominante", {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0})
     
@@ -309,6 +314,19 @@ st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
+# --- 🔄 SEÇÃO DO BOTÃO DE CAPTURA AUTOMÁTICA VIA API TIPMINER ---
+if st.button("🔄 CAPTURAR TIPMINER"):
+    try:
+        rodadas_capturadas = capturar_rodadas()
+        if len(rodadas_capturadas) > 0:
+            st.session_state.historico = rodadas_capturadas
+            st.success(f"✅ {len(rodadas_capturadas)} rodadas carregadas automaticamente")
+            st.rerun()
+        else:
+            st.warning("⚠️ Nenhuma rodada encontrada")
+    except Exception as erro:
+        st.error(f"Erro na captura: {erro}")
+
 if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
     try:
         tracker.atualizar_resultado(
@@ -331,7 +349,7 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         if "ROSA" in sinal_emitido_anterior: deu_green = vela >= 10.0
         else: deu_green = vela >= 2.0
             
-        nome_sinal_limpo = "CHANCE ELITE" if "CHANCE" in sinal_emitido_anterior else ("ROSA ELITE" if "ROSA" in sinal_emitido_anterior else ("OBSERVANDO" if "OBSERVANDO" in sinal_emitido_anterior else "AGUARDAR"))
+        nome_sinal_limpo = "CHANCE ELITE" if "CHANCE" in sinal_emitido_anterior else ("ROSA ELITE" if "ROSA" in sinal_emitido_anterior else ("PREMIUM" if "PREMIUM" in sinal_emitido_anterior else ("OBSERVANDO" if "OBSERVANDO" in sinal_emitido_anterior else "AGUARDAR")))
         st.session_state.auditoria_sinais[nome_sinal_limpo] += 1
         
         p_ex = snapshot.get("p_ex", 0)
@@ -367,7 +385,7 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
             "resultado_status": status_final_operacao
         })
 
-        if "ELITE" in nome_sinal_limpo or "CHANCE" in nome_sinal_limpo:
+        if "ELITE" in nome_sinal_limpo or "CHANCE" in nome_sinal_limpo or "PREMIUM" in nome_sinal_limpo:
             st.session_state.total_operacoes += 1
             st.session_state.score_medio = int(((st.session_state.score_medio * (st.session_state.total_operacoes - 1)) + snapshot.get("score_final", 0)) / st.session_state.total_operacoes)
             
@@ -479,6 +497,7 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
 cor_card = "red-card"
 if "CHANCE ELITE" in sinal_final: cor_card = "green-card"
 elif "ROSA ELITE" in sinal_final: cor_card = "blue-card"
+elif "PREMIUM" in sinal_final: cor_card = "main-card"
 elif "OBSERVANDO" in sinal_final: cor_card = "gold-card"
 
 st.markdown(f'<div class="{cor_card}"><h1 style="text-align:center;font-size:38px;margin:0;">{sinal_final}</h1><p style="text-align:center;margin:5px 0 0 0;font-size:18px;"><b>CONSENSO:</b> {score_final}% | <b>PADRÃO:</b> {padrao_atual}</p></div>', unsafe_allow_html=True)
@@ -529,6 +548,7 @@ with col_s1:
     st.markdown("##### 📢 Distribuição de Volumetria de Sinais")
     st.markdown(f"• **CHANCE ELITE:** `{st.session_state.auditoria_sinais['CHANCE ELITE']}` vezes")
     st.markdown(f"• **ROSA ELITE:** `{st.session_state.auditoria_sinais['ROSA ELITE']}` vezes")
+    st.markdown(f"• **PREMIUM:** `{st.session_state.auditoria_sinais['PREMIUM']}` vezes")
     st.markdown(f"• **OBSERVANDO:** `{st.session_state.auditoria_sinais['OBSERVANDO']}` vezes")
     st.markdown(f"• **AGUARDAR:** `{st.session_state.auditoria_sinais['AGUARDAR']}` vezes")
 
@@ -543,13 +563,13 @@ with c_as2:
     re_l = st.session_state.auditoria_assertividade["ROSA ELITE"]["loss"]
     st.metric("ROSA ELITE", f"{re_w}W - {re_l}L", f"Total: {re_w+re_l}")
 with c_as3:
+    pr_w = st.session_state.auditoria_assertividade["PREMIUM"]["wins"] if "PREMIUM" in st.session_state.auditoria_assertividade else 0
+    pr_l = st.session_state.auditoria_assertividade["PREMIUM"]["loss"] if "PREMIUM" in st.session_state.auditoria_assertividade else 0
+    st.metric("💎 PREMIUM", f"{pr_w}W - {pr_l}L", f"Total: {pr_w+pr_l}")
+with c_as4:
     ob_w = st.session_state.auditoria_assertividade["OBSERVANDO"]["wins"]
     ob_l = st.session_state.auditoria_assertividade["OBSERVANDO"]["loss"]
     st.metric("OBSERVANDO", f"{ob_w}W - {ob_l}L", f"Total: {ob_w+ob_l}")
-with c_as4:
-    ag_w = st.session_state.auditoria_assertividade["AGUARDAR"]["wins"]
-    ag_l = st.session_state.auditoria_assertividade["AGUARDAR"]["loss"]
-    st.metric("AGUARDAR", f"{ag_w}W - {ag_l}L", f"Total: {ag_w+ag_l}")
 
 if total_rodadas_auditadas > 0:
     with st.expander("📥 VER BANCO DATA LOG COMPLETO", expanded=False):
@@ -586,15 +606,15 @@ except Exception as e:
 
 # --- 📚 NOVO PAINEL: INTELIGÊNCIA APRENDIDA PELO TIPMINER V1 ---
 try:
-    # --- 👑 CORREÇÃO ESTRITA: Troca do tracker para chamada direta do módulo tipminer ---
     insights_minerados = tipminer.obter_insights()
     
     if insights_minerados:
         st.markdown('<div class="audit-card"><h3>📚 INTELIGÊNCIA APRENDIDA PELO TIPMINER</h3></div>', unsafe_allow_html=True)
         
         for faixa_nome, dados_f in insights_minerados.items():
-            num_faixa = faixa_nome.replace("CONSENSO_", "")
-            label_faixa = f"🎯 MATRIZ DE EDGE: Sinais com Consenso {num_faixa}% a {int(num_faixa)+9}%"
+            # Suporta tanto o padrão antigo quanto os novos rótulos detalhados do tipminer (Ex: PREMIUM_70)
+            label_limpo = faixa_nome.replace("_", " ")
+            label_faixa = f"🎯 MATRIZ DE EDGE: Sinais {label_limpo}%"
             
             with st.expander(label_faixa, expanded=False):
                 c_tm1, c_tm2, c_tm3, c_tm4 = st.columns(4)
@@ -669,8 +689,8 @@ if st.button("RESETAR ECOSSISTEMA TOTAL"):
     st.session_state.historico, st.session_state.banco_padroes, st.session_state.distancia_rosa, st.session_state.acertos, st.session_state.erros, st.session_state.ultimos_resultados, st.session_state.quarentena, st.session_state.memoria_positiva, st.session_state.memoria_negativa = [], [], 0, 0, 0, [], {}, [], {}
     st.session_state.perdas_consecutivas, st.session_state.max_loss_streak, st.session_state.modo_defensivo, st.session_state.cooldown_rodadas, st.session_state.sinais_ignorados, st.session_state.max_drawdown_calc, st.session_state.padroes_db, st.session_state.bloco_validacao, st.session_state.score_medio, st.session_state.total_operacoes = 0, 0, False, 0, 0, 0.0, {}, "NENHUM", 0, 0
     st.session_state.auditoria_freios = {"exaustao": 0, "degradacao": 0, "eficiencia": 0, "fase_macro": 0}
-    st.session_state.auditoria_sinais = {"CHANCE ELITE": 0, "ROSA ELITE": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0}
-    st.session_state.auditoria_assertividade = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
+    st.session_state.auditoria_sinais = {"CHANCE ELITE": 0, "ROSA ELITE": 0, "PREMIUM": 0, "OBSERVANDO": 0, "AGUARDAR": 0, "OUTROS": 0}
+    st.session_state.auditoria_assertividade = {"CHANCE ELITE": {"wins": 0, "loss": 0}, "ROSA ELITE": {"wins": 0, "loss": 0}, "PREMIUM": {"wins": 0, "loss": 0}, "OBSERVANDO": {"wins": 0, "loss": 0}, "AGUARDAR": {"wins": 0, "loss": 0}}
     st.session_state.log_auditoria_completo = []
     st.session_state.freio_dominante = {"EXAUSTÃO": 0, "DEGRADAÇÃO": 0, "EFICIÊNCIA": 0, "FASE MACRO": 0, "NENHUM": 0}
     st.session_state.sinal_pendente_julgamento = "AGUARDAR"
