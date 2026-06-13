@@ -185,7 +185,7 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
         conteudo = arquivo.read().decode("utf-8")
         linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n")]
         dados_brutos = []
-        for file_line in linhas:
+        for file_line in lines:
             if not file_line: 
                 continue
             try:
@@ -314,15 +314,17 @@ st.markdown(f'<div class="main-card"><p style="margin:0;text-align:center;color:
 st.markdown('<div class="main-card"><h3>🎮 PAINEL DE COMANDO AO VIVO</h3></div>', unsafe_allow_html=True)
 vela = st.number_input("Digite o resultado da última rodada:", min_value=0.0, format="%.2f", step=0.01)
 
-# --- 🔄 SEÇÃO DO BOTÃO DE CAPTURA COM DIAGNÓSTICO INTEGRADO NA TELA (PASSO A / A.1 / B) ---
+# --- 🔄 SEÇÃO DO BOTÃO DE CAPTURA COM CERCAMENTO MILIMÉTRICO DO IMPORT ---
 if st.button("🔄 CAPTURAR TIPMINER"):
     st.info("Iniciando captura...")
     try:
         st.write("PASSO A")
         
+        st.write("ANTES IMPORT")
+        
         import coletor_tipminer
         
-        st.write("PASSO A.1")
+        st.write("DEPOIS IMPORT")
         
         rodadas_capturadas = coletor_tipminer.capturar_rodadas()
         
@@ -603,7 +605,7 @@ try:
                 
             st.markdown("##### 🎯 Escalonamento de Alvos Atingidos")
             col_cat1, col_cat2, col_cat3 = st.columns(3)
-            col_cat1.metric("Bateu ≥ 2.0x", f"{info['vol_2x']}vezes")
+            col_cat1.metric("Bateu ≥ 2.0x", f"{info['vol_2x']} vezes")
             col_cat2.metric("Esticou ≥ 5.0x", f"{info['vol_5x']} vezes")
             col_cat3.metric("Explodiu Rosa ≥ 10x", f"{info['vol_rosa']} vezes")
 except Exception as e:
