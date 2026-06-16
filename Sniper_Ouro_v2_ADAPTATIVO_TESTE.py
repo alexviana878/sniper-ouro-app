@@ -333,6 +333,10 @@ if st.button("🔄 CAPTURAR TIPMINER"):
         st.write("PASSO B")
         st.write("TOTAL RECEBIDO:", len(rodadas_capturadas))
         
+        # --- 🔬 INJEÇÃO DE DETECÇÃO VISUAL DA AMOSTRA ---
+        st.write("AMOSTRA:")
+        st.write(rodadas_capturadas[:20])
+        
     except Exception as erro:
         st.error(f"ERRO: {erro}")
 
@@ -658,7 +662,7 @@ with col1:
     st.markdown(f"**⚡ Densidade Roxa (Últimas 15 rds):** {densidade_roxa_v}/15")
 with col2:
     st.markdown(f"**🌸 Cérebro de Expansão (Alvo Rosa):** {expansion_score}%")
-    st.markdown(f"**🧬 Força Base (Core Adaptive):** {adaptive_score}%")
+    st.markdown(f"**🧬 Força Base (Core Adaptive):** {expansion_score}%")
     st.markdown(f"**🥀 Winrate Recent do Padrão (Degradação):** {winrate_recente_padrao:.1f}%")
     st.markdown(f"**⏱️ Distância da Última Rosa:** {st.session_state.distancia_rosa} rds")
 
