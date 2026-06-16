@@ -32,14 +32,15 @@ def capturar_rodadas():
 
         html = resposta.text
 
+        # --- 🛠️ REGEX SEM O "x" SEGUNDO O ROTEIRO DE TESTE ---
         encontrados = re.findall(
-            r'(\d+,\d+)x',
+            r'(\d+,\d+)',
             html
         )
 
-        # --- 🔬 DIAGNÓSTICO DO REGEX ---
-        print("ENCONTRADOS BRUTOS:", len(encontrados))
-        print(encontrados[:50])
+        # --- 🔬 DIAGNÓSTICO AMPLIADO ---
+        print("PRIMEIROS 100:")
+        print(encontrados[:100])
 
         rodadas = []
 
