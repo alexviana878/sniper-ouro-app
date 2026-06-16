@@ -30,13 +30,13 @@ def capturar_rodadas():
         print("STATUS:", resposta.status_code)
         print("TAMANHO HTML:", len(resposta.text))
         
-        # 🧪 INJEÇÃO DE IMPRESSÃO BRUTA DOS PRIMEIROS 3000 CARACTERES NO LOG
-        print("TRECHO INICIAL DO HTML:")
-        print(resposta.text[:3000])
+        # 🧪 INJEÇÃO DE IMPRESSÃO BRUTA AMPLIADA PARA 5000 CARACTERES NO LOG
+        print("INICIO HTML:")
+        print(resposta.text[:5000])
 
-        # 🚨 RETORNO TEMPORÁRIO DE DIAGNÓSTICO ESTRUTURAL:
-        # Interrompe o fluxo aqui e joga os primeiros 3000 caracteres na tela do Sniper
-        return resposta.text[:3000]
+        # 🚨 RETORNO TEMPORÁRIO DE DIAGNÓSTICO ESTRUTURAL AMPLIADO:
+        # Interrompe o fluxo e cospe os 5000 caracteres iniciais na tela do Sniper
+        return resposta.text[:5000]
 
         html = resposta.text
 
