@@ -37,6 +37,10 @@ def capturar_rodadas():
             html
         )
 
+        # --- 🔬 DIAGNÓSTICO DO REGEX (CAPTURAS BRUTAS) ---
+        print("ENCONTRADOS:", len(encontrados))
+        print(encontrados[:20])
+
         rodadas = []
 
         for valor in encontrados:
