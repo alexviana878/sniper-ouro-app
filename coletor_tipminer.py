@@ -29,6 +29,14 @@ def capturar_rodadas():
         # --- 📊 PRINTS DE DIAGNÓSTICO AVANÇADO ---
         print("STATUS:", resposta.status_code)
         print("TAMANHO HTML:", len(resposta.text))
+        
+        # 🧪 INJEÇÃO DE IMPRESSÃO BRUTA DOS PRIMEIROS 3000 CARACTERES NO LOG
+        print("TRECHO INICIAL DO HTML:")
+        print(resposta.text[:3000])
+
+        # 🚨 RETORNO TEMPORÁRIO DE DIAGNÓSTICO ESTRUTURAL:
+        # Interrompe o fluxo aqui e joga os primeiros 3000 caracteres na tela do Sniper
+        return resposta.text[:3000]
 
         html = resposta.text
 
@@ -37,15 +45,9 @@ def capturar_rodadas():
             html
         )
 
-        # --- 🔬 DIAGNÓSTICO DO REGEX (CAPTURAS BRUTAS AMPLIADAS) ---
+        # --- 🔬 DIAGNÓSTICO DO REGEX ---
         print("ENCONTRADOS BRUTOS:", len(encontrados))
         print(encontrados[:50])
-
-        # 🚨 RETORNO TEMPORÁRIO DE DIAGNÓSTICO:
-        # Retorna a lista de strings textuais capturadas pelo regex diretamente,
-        # ignorando a conversão para float por enquanto para inspeção visual na interface.
-        if len(encontrados) > 0:
-            return encontrados[:50]
 
         rodadas = []
 
