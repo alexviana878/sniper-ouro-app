@@ -333,9 +333,9 @@ if st.button("🔄 CAPTURAR TIPMINER"):
         st.write("PASSO B")
         st.write("TOTAL RECEBIDO:", len(rodadas_capturadas))
         
-        # --- 🔬 INJEÇÃO DE DETECÇÃO VISUAL DA AMOSTRA ---
+        # --- 🔬 INJEÇÃO DE DETECÇÃO VISUAL DA AMOSTRA VIA CONTAINER DE CÓDIGO DO STREAMLIT ---
         st.write("AMOSTRA:")
-        st.write(rodadas_capturadas[:20])
+        st.code(str(rodadas_capturadas)[:3000])
         
     except Exception as erro:
         st.error(f"ERRO: {erro}")
@@ -645,7 +645,7 @@ except Exception as e:
 
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 
-st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍDOS)")
+#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍDOS)
 st.write(f"📊 **Adaptive Score:** `{adaptive_score}`")
 st.write(f"⚡ **Radar Score:** `{radar_score}`")
 st.write(f"🌸 **Expansion Score:** `{expansion_score}`")
