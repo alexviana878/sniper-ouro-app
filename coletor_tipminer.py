@@ -29,14 +29,6 @@ def capturar_rodadas():
         # --- 📊 PRINTS DE DIAGNÓSTICO AVANÇADO ---
         print("STATUS:", resposta.status_code)
         print("TAMANHO HTML:", len(resposta.text))
-        
-        # 🧪 INJEÇÃO DE IMPRESSÃO BRUTA AMPLIADA PARA 5000 CARACTERES NO LOG
-        print("INICIO HTML:")
-        print(resposta.text[:5000])
-
-        # 🚨 RETORNO TEMPORÁRIO DE DIAGNÓSTICO ESTRUTURAL AMPLIADO:
-        # Interrompe o fluxo e cospe os 5000 caracteres iniciais na tela do Sniper
-        return resposta.text[:5000]
 
         html = resposta.text
 
