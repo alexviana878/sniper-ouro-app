@@ -185,7 +185,9 @@ with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expande
         conteudo = arquivo.read().decode("utf-8")
         linhas = [ln.strip() for ln in conteudo.replace("\r", "\n").split("\n")]
         dados_brutos = []
-        for file_line in lines:
+        
+        # --- 🛠️ AJUSTE MASTER APLICADO: CORREÇÃO DE LINHAS ESTREITA ---
+        for file_line in linhas:
             if not file_line: 
                 continue
             try:
