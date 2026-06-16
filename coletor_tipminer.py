@@ -37,9 +37,15 @@ def capturar_rodadas():
             html
         )
 
-        # --- 🔬 DIAGNÓSTICO DO REGEX (CAPTURAS BRUTAS) ---
-        print("ENCONTRADOS:", len(encontrados))
-        print(encontrados[:20])
+        # --- 🔬 DIAGNÓSTICO DO REGEX (CAPTURAS BRUTAS AMPLIADAS) ---
+        print("ENCONTRADOS BRUTOS:", len(encontrados))
+        print(encontrados[:50])
+
+        # 🚨 RETORNO TEMPORÁRIO DE DIAGNÓSTICO:
+        # Retorna a lista de strings textuais capturadas pelo regex diretamente,
+        # ignorando a conversão para float por enquanto para inspeção visual na interface.
+        if len(encontrados) > 0:
+            return encontrados[:50]
 
         rodadas = []
 
@@ -56,7 +62,7 @@ def capturar_rodadas():
         return rodadas
 
     except Exception as erro:
-        print("ERRO:", erro)
+        print("ERRO INTERNO NO COLETOR:", erro)
         return []
 
 
