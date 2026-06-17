@@ -30,20 +30,29 @@ def capturar_rodadas():
         print("STATUS:", resposta.status_code)
         print("TAMANHO HTML:", len(resposta.text))
         
-        # 🔬 EXPLORAÇÃO DE REDIRECIONAMENTO E METADADOS
         print("URL FINAL:")
         print(resposta.url)
 
         print("HEADERS:")
         print(resposta.headers)
 
-        # 🚨 RETORNO TEMPORÁRIO DE DIAGNÓSTICO:
-        # Devolve a URL final em formato de lista isolada para renderizar na tela do Sniper
-        return [resposta.url]
+        # --- 🔬 VARREDURA TEXTUAL ADAPTATIVA ---
+        html = resposta.text.lower()
 
-        html = resposta.text
+        if "api" in html:
+            print("ACHOU API")
 
-        # --- REGEX SEM O "x" ---
+        if "historico" in html:
+            print("ACHOU HISTORICO")
+
+        if "aviator" in html:
+            print("ACHOU AVIATOR")
+
+        # 🚨 RETORNO TEMPORÁRIO DE DIAGNÓSTICO TEXTUAL:
+        # Entrega o início do HTML em formato de lista para o st.code do Sniper exibir
+        return [html[:3000]]
+
+        # --- BLOCOS SUSPENSOS DURANTE O DIAGNÓSTICO ---
         encontrados = re.findall(
             r'(\d+,\d+)',
             html
