@@ -36,26 +36,19 @@ def capturar_rodadas():
         print("HEADERS:")
         print(resposta.headers)
 
-        # --- 🔬 VARREDURA TEXTUAL ADAPTATIVA ---
-        html = resposta.text.lower()
+        html = resposta.text
 
-        if "api" in html:
-            print("ACHOU API")
+        # --- 💾 AJUSTE MASTER: ESCRITA DO ARQUIVO DEBUG NO AMBIENTE ---
+        with open("debug_tipminer.html", "w", encoding="utf-8") as f:
+            f.write(html)
 
-        if "historico" in html:
-            print("ACHOU HISTORICO")
-
-        if "aviator" in html:
-            print("ACHOU AVIATOR")
-
-        # 🚨 RETORNO TEMPORÁRIO DE DIAGNÓSTICO TEXTUAL:
-        # Entrega o início do HTML em formato de lista para o st.code do Sniper exibir
-        return [html[:3000]]
+        # 🚨 RETORNO TEMPORÁRIO DE CONFIRMAÇÃO DO DEBUG:
+        return ["ARQUIVO DEBUG GERADO"]
 
         # --- BLOCOS SUSPENSOS DURANTE O DIAGNÓSTICO ---
         encontrados = re.findall(
             r'(\d+,\d+)',
-            html
+            html.lower()
         )
 
         print("PRIMEIROS 100:")
