@@ -29,16 +29,26 @@ def capturar_rodadas():
         # --- 📊 PRINTS DE DIAGNÓSTICO AVANÇADO ---
         print("STATUS:", resposta.status_code)
         print("TAMANHO HTML:", len(resposta.text))
+        
+        # 🔬 EXPLORAÇÃO DE REDIRECIONAMENTO E METADADOS
+        print("URL FINAL:")
+        print(resposta.url)
+
+        print("HEADERS:")
+        print(resposta.headers)
+
+        # 🚨 RETORNO TEMPORÁRIO DE DIAGNÓSTICO:
+        # Devolve a URL final em formato de lista isolada para renderizar na tela do Sniper
+        return [resposta.url]
 
         html = resposta.text
 
-        # --- 🛠️ REGEX SEM O "x" SEGUNDO O ROTEIRO DE TESTE ---
+        # --- REGEX SEM O "x" ---
         encontrados = re.findall(
             r'(\d+,\d+)',
             html
         )
 
-        # --- 🔬 DIAGNÓSTICO AMPLIADO ---
         print("PRIMEIROS 100:")
         print(encontrados[:100])
 
