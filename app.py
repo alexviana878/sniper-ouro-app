@@ -2,6 +2,7 @@ import csv
 from datetime import datetime
 import os
 import streamlit as st
+import json
 
 st.set_page_config(
     page_title="Sniper Ouro Independente", page_icon="🎯", layout="centered"
@@ -46,9 +47,26 @@ st.markdown(
 
 st.title("🎯 Sniper Ouro - Independência Total")
 
-vela = st.number_input(
-    "Digite a última vela do gráfico:", min_value=0.0, format="%.2f", step=0.01
-)
+# --- 🤖 INJEÇÃO MASTER: CHAVE SELETORA E INTEGRAÇÃO DO MODO AUTOMÁTICO ---
+modo_auto = st.checkbox("🤖 Modo Automático TipMiner")
+
+if modo_auto:
+    try:
+        with open("rodadas.json", "r", encoding="utf-8") as f:
+            rodadas = json.load(f)
+        # Pega o último elemento inserido na lista do JSON e converte para float
+        vela = float(rodadas[-1])
+        st.success(f"Última vela carregada automaticamente: {vela}x")
+    except Exception as erro:
+        st.error(f"Erro ao carregar rodadas.json: {erro}")
+        vela = 0.0
+else:
+    vela = st.number_input(
+        "Digite a última vela do gráfico:",
+        min_value=0.0,
+        format="%.2f",
+        step=0.01
+    )
 
 
 # --- NOVA MOTORIZAÇÃO CALIBRADA (ANTI-VÍCIO) ---
@@ -236,7 +254,7 @@ if st.button("CALCULAR PROBABILIDADE"):
                 )
 
             res_inicial = (
-                "AGUARDANDO VELA"
+                "AGUARDAR VELA"
                 if ("ENTRAR" in sinal or "ROSA" in sinal)
                 else "N/A"
             )
