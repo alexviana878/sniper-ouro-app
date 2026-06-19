@@ -42,10 +42,7 @@ def capturar_rodadas():
         with open("debug_tipminer.html", "w", encoding="utf-8") as f:
             f.write(html)
 
-        # 🚨 RETORNO TEMPORÁRIO DE CONFIRMAÇÃO DO DEBUG:
-        return ["ARQUIVO DEBUG GERADO"]
-
-        # --- BLOCOS SUSPENSOS DURANTE O DIAGNÓSTICO ---
+        # --- BLOCOS ATIVADOS AUTOMATICAMENTE APÓS REMOÇÃO DO RETORNO ---
         encontrados = re.findall(
             r'(\d+,\d+)',
             html.lower()
