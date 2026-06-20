@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from datetime import datetime
 import json
 import os
@@ -176,6 +177,83 @@ janela_ativa = agora.minute in minutos_pagantes
 st.markdown(f'<div class="clock-card"><h2 style="color:#00ff66 !important;margin:0;">{agora.strftime("%H:%M:%S")}</h2><p style="margin:0;color:#00ff66 !important;">{"⚠️ JANELA ATIVA DE EXPLOSÃO" if janela_ativa else "ECOSSISTEMA MONITORANDO"}</p></div>', unsafe_allow_html=True)
 
 st.title("🎯 SNIPER OURO IA - LAB AUDITORIA (TESTES)")
+
+# --- 🤖 INJEÇÃO MASTER OPTIMIZED: IMPORTAÇÃO DIRETA DO EXCEL COM RECONSTRUÇÃO DE INTELIGÊNCIA ---
+st.markdown("---")
+
+st.subheader("🤖 IMPORTAÇÃO RÁPIDA TIPMINER")
+
+arquivo_tipminer = st.file_uploader(
+    "Selecione o Excel exportado do TipMiner",
+    type=["xlsx"]
+)
+
+if arquivo_tipminer is not None:
+
+    try:
+
+        df = pd.read_excel(arquivo_tipminer)
+
+        if "Número" in df.columns:
+
+            rodadas = []
+
+            for valor in df["Número"]:
+
+                try:
+                    numero = float(valor)
+
+                    if numero > 0:
+                        rodadas.append(numero)
+
+                except:
+                    pass
+
+            st.success(
+                f"{len(rodadas)} rodadas carregadas do TipMiner."
+            )
+
+            # --- 🔬 AJUSTE MASTER CRÍTICO: RECONSTRUÇÃO DA ESTRUTURA DO CÉREBRO ---
+            if st.button("🚀 INJETAR NO SNIPER"):
+
+                st.session_state.historico = rodadas
+
+                novos_padroes = []
+                dist_rosa = 0
+
+                for i, valor in enumerate(rodadas):
+
+                    dist_rosa = 0 if valor >= 10 else dist_rosa + 1
+
+                    if i >= 5:
+                        novos_padroes.append({
+                            "padrao": brain.gerar_padrao(rodadas[i-5:i]),
+                            "resultado": valor
+                        })
+
+                st.session_state.banco_padroes = novos_padroes
+                st.session_state.distancia_rosa = dist_rosa
+
+                salvar_memoria()
+
+                st.success(
+                    f"🔥 Histórico carregado com {len(rodadas)} rodadas."
+                )
+
+                st.rerun()
+
+        else:
+
+            st.error(
+                "Coluna Número não encontrada."
+            )
+
+    except Exception as erro:
+
+        st.error(
+            f"Erro ao abrir arquivo: {erro}"
+        )
+
 
 with st.expander("📂 INJETAR DADOS / SELECIONAR BLOCO DE VALIDAÇÃO", expanded=False):
     bloco_opcao = st.radio("Escolha a partição de dados para testar sobrevivência:", ["Carga Completa (Sem Divisão)", "Bloco 1 (Velas 1 a 10.000)", "Bloco 2 (Velas 10.001 a 15.000 - Fora da Amostra)", "Bloco 3 (Velas 15.001 a 20.000 - Fora da Amostra)"])
@@ -645,7 +723,7 @@ except Exception as e:
 
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 
-#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍDOS)
+st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍADOS)")
 st.write(f"📊 **Adaptive Score:** `{adaptive_score}`")
 st.write(f"⚡ **Radar Score:** `{radar_score}`")
 st.write(f"🌸 **Expansion Score:** `{expansion_score}`")
