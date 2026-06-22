@@ -22,10 +22,13 @@ with sync_playwright() as p:
     texto = page.locator("body").inner_text()
 
     print()
+    print("=" * 50)
     print("PRIMEIROS 3000 CARACTERES:")
+    print("=" * 50)
     print()
+
     print(texto[:3000])
 
-    input("ENTER PARA FECHAR")
+    input("\nENTER PARA FECHAR")
 
     browser.close()
