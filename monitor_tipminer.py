@@ -15,6 +15,17 @@ with sync_playwright() as p:
 
     print("TIPMINER ABERTO")
 
-    input("APERTE ENTER PARA FECHAR")
+    input("FAÇA LOGIN E APERTE ENTER")
+
+    print("PÁGINA CARREGADA")
+
+    texto = page.locator("body").inner_text()
+
+    print()
+    print("PRIMEIROS 3000 CARACTERES:")
+    print()
+    print(texto[:3000])
+
+    input("ENTER PARA FECHAR")
 
     browser.close()
