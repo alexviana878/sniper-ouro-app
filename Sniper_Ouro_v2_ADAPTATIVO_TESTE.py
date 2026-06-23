@@ -67,7 +67,7 @@ ARQUIVO_AUDITORIA_CSV = os.path.join(PASTA_DADOS, "historico_sniper_teste.csv")
 CABECALHO_CSV = "id_rodada,versao_cerebro,timestamp,padrao,fase_macro,vela,cor,radar,expansao,winrate_historico_padrao,winrate_recente_padrao,core_adaptive,distancia_rosa,densidade_rosa_15,freio_dominante,decisao_sinal,resultado_status\n"
 
 def carregar_memoria():
-    if os.path.exists(ARQUIVO_MEMORIA):
+    if os.path.exists(ARQUONTES_MEMORIA := ARQUIVO_MEMORIA):
         try:
             with open(ARQUIVO_MEMORIA, "r") as f:
                 dados = json.load(f)
@@ -174,6 +174,27 @@ agora = datetime.now()
 minutos_pagantes = [2,5,8,10,12,15,18,20,22,25,28,30,32,35,38,40,42,45,48,50,52,55,58,0]
 janela_ativa = agora.minute in minutos_pagantes
 
+# --- 🤖 LEITURA AUTOMÁTICA DO JSON ---
+try:
+    with open(
+        "tempo_real.json",
+        "r",
+        encoding="utf-8"
+    ) as f:
+        dados_tempo_real = json.load(f)
+
+    rodadas_tempo_real = dados_tempo_real.get(
+        "rodadas",
+        []
+    )
+
+    if len(rodadas_tempo_real) > 0:
+        st.session_state.historico = (
+            rodadas_tempo_real.copy()
+        )
+except Exception as erro:
+    pass
+
 st.markdown(f'<div class="clock-card"><h2 style="color:#00ff66 !important;margin:0;">{agora.strftime("%H:%M:%S")}</h2><p style="margin:0;color:#00ff66 !important;">{"⚠️ JANELA ATIVA DE EXPLOSÃO" if janela_ativa else "ECOSSISTEMA MONITORANDO"}</p></div>', unsafe_allow_html=True)
 
 st.title("🎯 SNIPER OURO IA - LAB AUDITORIA (TESTES)")
@@ -189,42 +210,31 @@ arquivo_tipminer = st.file_uploader(
 )
 
 if arquivo_tipminer is not None:
-
     try:
-
         df = pd.read_excel(arquivo_tipminer)
-
         if "Número" in df.columns:
-
             rodadas = []
-
             for valor in df["Número"]:
-
                 try:
                     numero = float(valor)
-
                     if numero > 0:
                         rodadas.append(numero)
-
                 except:
                     pass
 
             st.success(
-                f"{len(rodadas)} rodadas carregadas do TipMiner."
+                f"{len(rodadas)} rodadas loaded do TipMiner."
             )
 
             # --- 🔬 AJUSTE MASTER CRÍTICO: RECONSTRUÇÃO DA ESTRUTURA DO CÉREBRO ---
             if st.button("🚀 INJETAR NO SNIPER"):
-
                 st.session_state.historico = rodadas
 
                 novos_padroes = []
                 dist_rosa = 0
 
                 for i, valor in enumerate(rodadas):
-
                     dist_rosa = 0 if valor >= 10 else dist_rosa + 1
-
                     if i >= 5:
                         novos_padroes.append({
                             "padrao": brain.gerar_padrao(rodadas[i-5:i]),
@@ -239,17 +249,12 @@ if arquivo_tipminer is not None:
                 st.success(
                     f"🔥 Histórico carregado com {len(rodadas)} rodadas."
                 )
-
                 st.rerun()
-
         else:
-
             st.error(
                 "Coluna Número não encontrada."
             )
-
     except Exception as erro:
-
         st.error(
             f"Erro ao abrir arquivo: {erro}"
         )
@@ -556,7 +561,7 @@ if st.button("PROCESSAR E CALCULAR PROBABILIDADE"):
         sinal_previsto, score_previsto = brain.calcular_consenso(ad_score_f, r_futuro, e_futuro, f_futuro, tx_roxa_quente_ctx_f, False, st.session_state.historico, win_p_f, win_r_f)
         dens_f = sum(1 for x in st.session_state.historico[-15:] if x >= 2)
         
-        st.session_state.sinal_pendente_julgamento = sinal_previsto
+        st.session_state.sinal_previsto_julgamento = sinal_previsto
         st.session_state.contexto_pendente_julgamento = f"{p_futuro}_{f_futuro}"
         st.session_state.snapshot_metricas_rodada = {
             "padrao": p_futuro, "fase": f_futuro, "radar": r_futuro, "expansao": e_futuro,
@@ -723,7 +728,7 @@ except Exception as e:
 
 st.markdown('<div class="main-card"><h3>🧠 STATUS DA BANCA MULTICÉREBRO</h3></div>', unsafe_allow_html=True)
 
-st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍADOS)")
+st.markdown("#### 🔍 MÉTRICAS DE AUDITORIA DO LABORATÓRIO (VALORES EXTRAÍDOS)")
 st.write(f"📊 **Adaptive Score:** `{adaptive_score}`")
 st.write(f"⚡ **Radar Score:** `{radar_score}`")
 st.write(f"🌸 **Expansion Score:** `{expansion_score}`")
