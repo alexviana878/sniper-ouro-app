@@ -192,6 +192,9 @@ try:
         st.session_state.historico = (
             rodadas_tempo_real.copy()
         )
+        st.success(
+            f"JSON TEMPO REAL: {len(rodadas_tempo_real)} velas carregadas"
+        )
 except Exception as erro:
     pass
 
